@@ -58,7 +58,7 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final pages = [
       ExpensesPage(state: _state),
-      const Center(child: Text('Resumo / Acerto (próxima etapa)')),
+      SettlementPage(state: _state),
       SettingsPage(state: _state),
     ];
 
@@ -166,6 +166,82 @@ class ExpensesPage extends StatelessWidget {
   }
 }
 
+class SettlementPage extends StatelessWidget {
+  const SettlementPage({super.key, required this.state});
+
+  final AppState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final quota = state.quotaPorPessoa;
+    final saldos = state.saldos;
+    final transacoes = state.calcularAcertos();
+
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: [
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Total geral: ${_currency.format(state.totalGeral)}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text('Cota por pessoa (total/4): ${_currency.format(quota)}'),
+                const SizedBox(height: 8),
+                for (var i = 0; i < state.people.length; i++)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(state.people[i]),
+                    subtitle: Text(
+                      'Pagou: ${_currency.format(state.totalPorPessoa[i])}',
+                    ),
+                    trailing: Text(
+                      '${saldos[i] >= 0 ? '+' : ''}${_currency.format(saldos[i])}',
+                      style: TextStyle(
+                        color: saldos[i] >= 0 ? Colors.green : Colors.red,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          'Quem deve para quem',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 6),
+        if (transacoes.isEmpty)
+          const Card(
+            child: Padding(
+              padding: EdgeInsets.all(12),
+              child: Text('Tudo acertado no momento. 🎉'),
+            ),
+          )
+        else
+          ...transacoes.map(
+            (t) => Card(
+              child: ListTile(
+                leading: const Icon(Icons.swap_horiz),
+                title: Text('${state.people[t.from]} → ${state.people[t.to]}'),
+                trailing: Text(
+                  _currency.format(t.amount),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key, required this.state});
 
@@ -250,6 +326,46 @@ class AppState extends ChangeNotifier {
       totals[e.paidBy] += e.value;
     }
     return totals;
+  }
+
+  double get quotaPorPessoa => totalGeral / 4;
+
+  List<double> get saldos {
+    final paid = totalPorPessoa;
+    final quota = quotaPorPessoa;
+    return paid.map((p) => p - quota).toList(growable: false);
+  }
+
+  List<SettlementTransaction> calcularAcertos() {
+    final list = <SettlementTransaction>[];
+    final deb = <(int, double)>[];
+    final cred = <(int, double)>[];
+
+    for (var i = 0; i < saldos.length; i++) {
+      final value = saldos[i];
+      if (value < -0.009) deb.add((i, -value));
+      if (value > 0.009) cred.add((i, value));
+    }
+
+    var d = 0;
+    var c = 0;
+    while (d < deb.length && c < cred.length) {
+      final (debIdx, debVal) = deb[d];
+      final (credIdx, credVal) = cred[c];
+      final amount = debVal < credVal ? debVal : credVal;
+      list.add(
+        SettlementTransaction(from: debIdx, to: credIdx, amount: amount),
+      );
+
+      final newDeb = debVal - amount;
+      final newCred = credVal - amount;
+      deb[d] = (debIdx, newDeb);
+      cred[c] = (credIdx, newCred);
+
+      if (newDeb <= 0.009) d++;
+      if (newCred <= 0.009) c++;
+    }
+    return list;
   }
 
   void load() {
@@ -452,6 +568,18 @@ extension CategoryX on Category {
         return 'Outros';
     }
   }
+}
+
+class SettlementTransaction {
+  SettlementTransaction({
+    required this.from,
+    required this.to,
+    required this.amount,
+  });
+
+  final int from;
+  final int to;
+  final double amount;
 }
 
 class Expense {
