@@ -10,6 +10,8 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
 
+import 'domain/settlement.dart';
+
 final _currency = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
 final _dateFmt = DateFormat('dd/MM/yyyy');
 
@@ -350,42 +352,10 @@ class AppState extends ChangeNotifier {
 
   double get quotaPorPessoa => totalGeral / 4;
 
-  List<double> get saldos {
-    final paid = totalPorPessoa;
-    final quota = quotaPorPessoa;
-    return paid.map((p) => p - quota).toList(growable: false);
-  }
+  List<double> get saldos => calculateBalances(totalPorPessoa, peopleCount: 4);
 
-  List<SettlementTransaction> calcularAcertos() {
-    final list = <SettlementTransaction>[];
-    final deb = <(int, double)>[];
-    final cred = <(int, double)>[];
-
-    for (var i = 0; i < saldos.length; i++) {
-      final value = saldos[i];
-      if (value < -0.009) deb.add((i, -value));
-      if (value > 0.009) cred.add((i, value));
-    }
-
-    var d = 0;
-    var c = 0;
-    while (d < deb.length && c < cred.length) {
-      final (debIdx, debVal) = deb[d];
-      final (credIdx, credVal) = cred[c];
-      final amount = debVal < credVal ? debVal : credVal;
-      list.add(
-        SettlementTransaction(from: debIdx, to: credIdx, amount: amount),
-      );
-
-      final newDeb = debVal - amount;
-      final newCred = credVal - amount;
-      deb[d] = (debIdx, newDeb);
-      cred[c] = (credIdx, newCred);
-
-      if (newDeb <= 0.009) d++;
-      if (newCred <= 0.009) c++;
-    }
-    return list;
+  List<SettlementTransfer> calcularAcertos() {
+    return calculateSettlements(saldos);
   }
 
   Future<String> exportarPdf() async {
@@ -665,18 +635,6 @@ extension CategoryX on Category {
         return 'Outros';
     }
   }
-}
-
-class SettlementTransaction {
-  SettlementTransaction({
-    required this.from,
-    required this.to,
-    required this.amount,
-  });
-
-  final int from;
-  final int to;
-  final double amount;
 }
 
 class Expense {
