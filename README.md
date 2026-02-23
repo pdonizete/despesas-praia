@@ -47,3 +47,10 @@ Os dados são salvos localmente via **Hive** em uma box chamada `despesas_praia`
 - Chave `expenses`: lista de despesas serializadas em JSON
 
 No Android, os arquivos ficam no diretório interno da aplicação (sandbox), persistindo entre aberturas do app.
+
+## Parcelamento
+
+- Cada despesa pode ser cadastrada com `parcelas` (inteiro, mínimo `1`, padrão `1`).
+- Quando `parcelas > 1`, a despesa aparece como parcelada (ex.: `6x`) com valor por parcela na lista e no PDF.
+- O cálculo de total geral, total por pessoa, cota e acertos continua usando o **valor total da despesa** (sem quebra mensal).
+- Entradas antigas sem campo `parcelas` continuam válidas e são tratadas como `1`.

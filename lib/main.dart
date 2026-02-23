@@ -157,7 +157,7 @@ class ExpensesPage extends StatelessWidget {
                       onDismissed: (_) => state.deleteExpense(e.id),
                       child: ListTile(
                         title: Text(
-                          '${_currency.format(e.value)} • ${e.category.label}',
+                          '${_currency.format(e.value)} • ${e.category.label}${e.isParcelada ? ' • ${e.parcelas}x de ${_currency.format(e.valorParcela)}' : ''}',
                         ),
                         subtitle: Text(
                           '${state.people[e.paidBy]} • ${_dateFmt.format(e.date)}${e.description.isNotEmpty ? ' • ${e.description}' : ''}',
@@ -382,7 +382,7 @@ class AppState extends ChangeNotifier {
           ...ordered.map(
             (e) => pw.Bullet(
               text:
-                  '${_dateFmt.format(e.date)} • ${e.category.label} • ${people[e.paidBy]} • ${_currency.format(e.value)}${e.description.isEmpty ? '' : ' • ${e.description}'}',
+                  '${_dateFmt.format(e.date)} • ${e.category.label} • ${people[e.paidBy]} • ${_currency.format(e.value)}${e.isParcelada ? ' • ${e.parcelas}x de ${_currency.format(e.valorParcela)}' : ''}${e.description.isEmpty ? '' : ' • ${e.description}'}',
             ),
           ),
           pw.SizedBox(height: 12),
@@ -446,14 +446,26 @@ class AppState extends ChangeNotifier {
     required Category category,
     required int paidBy,
     required DateTime date,
+    int parcelas = 1,
     String description = '',
   }) async {
+    if (value <= 0) {
+      throw ArgumentError.value(value, 'value', 'Deve ser maior que 0.');
+    }
+    if (parcelas < 1) {
+      throw ArgumentError.value(parcelas, 'parcelas', 'Deve ser no mínimo 1.');
+    }
+    if (paidBy < 0 || paidBy >= people.length) {
+      throw ArgumentError.value(paidBy, 'paidBy', 'Índice inválido.');
+    }
+
     final item = Expense(
       id: _uuid.v4(),
       value: value,
       category: category,
       paidBy: paidBy,
       date: DateTime(date.year, date.month, date.day),
+      parcelas: parcelas,
       description: description.trim(),
     );
     expenses.add(item);
@@ -486,11 +498,20 @@ class AddExpenseSheet extends StatefulWidget {
 class _AddExpenseSheetState extends State<AddExpenseSheet> {
   final _formKey = GlobalKey<FormState>();
   final _valueCtrl = TextEditingController();
+  final _parcelasCtrl = TextEditingController(text: '1');
   final _descriptionCtrl = TextEditingController();
 
   Category _category = Category.alimentacao;
   int _paidBy = 0;
   DateTime _date = DateTime.now();
+
+  @override
+  void dispose() {
+    _valueCtrl.dispose();
+    _parcelasCtrl.dispose();
+    _descriptionCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -525,6 +546,22 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
                   final v = double.tryParse((value ?? '').replaceAll(',', '.'));
                   if (v == null || v <= 0) {
                     return 'Informe um valor maior que 0';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _parcelasCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Parcelas',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  final parcelas = int.tryParse((value ?? '').trim());
+                  if (parcelas == null || parcelas < 1) {
+                    return 'Informe parcelas (mínimo 1)';
                   }
                   return null;
                 },
@@ -596,11 +633,13 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
                     final value = double.parse(
                       _valueCtrl.text.replaceAll(',', '.'),
                     );
+                    final parcelas = int.parse(_parcelasCtrl.text.trim());
                     await widget.state.addExpense(
                       value: value,
                       category: _category,
                       paidBy: _paidBy,
                       date: _date,
+                      parcelas: parcelas,
                       description: _descriptionCtrl.text,
                     );
                     if (context.mounted) {
@@ -644,15 +683,20 @@ class Expense {
     required this.category,
     required this.paidBy,
     required this.date,
+    int parcelas = 1,
     required this.description,
-  });
+  }) : parcelas = parcelas < 1 ? 1 : parcelas;
 
   final String id;
   final double value;
   final Category category;
   final int paidBy;
   final DateTime date;
+  final int parcelas;
   final String description;
+
+  bool get isParcelada => parcelas > 1;
+  double get valorParcela => value / parcelas;
 
   Map<String, dynamic> toMap() => {
     'id': id,
@@ -660,10 +704,19 @@ class Expense {
     'category': category.name,
     'paidBy': paidBy,
     'date': date.toIso8601String(),
+    'parcelas': parcelas,
     'description': description,
   };
 
   static Expense fromMap(Map<String, dynamic> map) {
+    final rawParcelas = map['parcelas'];
+    final parsedParcelas = switch (rawParcelas) {
+      int v => v,
+      num v => v.toInt(),
+      String v => int.tryParse(v),
+      _ => null,
+    };
+
     return Expense(
       id: map['id'] as String,
       value: (map['value'] as num).toDouble(),
@@ -673,6 +726,7 @@ class Expense {
       ),
       paidBy: map['paidBy'] as int,
       date: DateTime.parse(map['date'] as String),
+      parcelas: (parsedParcelas ?? 1) < 1 ? 1 : (parsedParcelas ?? 1),
       description: (map['description'] as String?) ?? '',
     );
   }
