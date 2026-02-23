@@ -1,9 +1,13 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
 
 final _currency = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
@@ -212,6 +216,22 @@ class SettlementPage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: () async {
+              final path = await state.exportarPdf();
+              if (context.mounted) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('PDF salvo em: $path')));
+              }
+            },
+            icon: const Icon(Icons.picture_as_pdf),
+            label: const Text('Exportar PDF e compartilhar'),
+          ),
+        ),
+        const SizedBox(height: 10),
         const Text(
           'Quem deve para quem',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
@@ -366,6 +386,83 @@ class AppState extends ChangeNotifier {
       if (newCred <= 0.009) c++;
     }
     return list;
+  }
+
+  Future<String> exportarPdf() async {
+    final doc = pw.Document();
+    final ordered = [...expenses]..sort((a, b) => a.date.compareTo(b.date));
+
+    final DateTime? minDate = ordered.isNotEmpty ? ordered.first.date : null;
+    final DateTime? maxDate = ordered.isNotEmpty ? ordered.last.date : null;
+    final acertos = calcularAcertos();
+
+    doc.addPage(
+      pw.MultiPage(
+        build: (context) => [
+          pw.Header(level: 0, child: pw.Text('Despesas da Praia')),
+          pw.Text(
+            'Período: ${minDate == null ? '-' : _dateFmt.format(minDate)} a ${maxDate == null ? '-' : _dateFmt.format(maxDate)}',
+          ),
+          pw.SizedBox(height: 10),
+          pw.Text(
+            'Lista de despesas',
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 6),
+          ...ordered.map(
+            (e) => pw.Bullet(
+              text:
+                  '${_dateFmt.format(e.date)} • ${e.category.label} • ${people[e.paidBy]} • ${_currency.format(e.value)}${e.description.isEmpty ? '' : ' • ${e.description}'}',
+            ),
+          ),
+          pw.SizedBox(height: 12),
+          pw.Text(
+            'Totais',
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+          ),
+          pw.Text('Total geral: ${_currency.format(totalGeral)}'),
+          ...List.generate(
+            people.length,
+            (i) => pw.Text(
+              '${people[i]} pagou: ${_currency.format(totalPorPessoa[i])}',
+            ),
+          ),
+          pw.SizedBox(height: 12),
+          pw.Text(
+            'Resumo / Ajustes',
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+          ),
+          pw.Text('Cota por pessoa: ${_currency.format(quotaPorPessoa)}'),
+          ...List.generate(
+            people.length,
+            (i) => pw.Text(
+              '${people[i]} saldo: ${(saldos[i] >= 0 ? '+' : '')}${_currency.format(saldos[i])}',
+            ),
+          ),
+          pw.SizedBox(height: 8),
+          if (acertos.isEmpty)
+            pw.Text('Tudo acertado no momento.')
+          else
+            ...acertos.map(
+              (a) => pw.Text(
+                '${people[a.from]} deve ${_currency.format(a.amount)} para ${people[a.to]}',
+              ),
+            ),
+        ],
+      ),
+    );
+
+    final dir = await getApplicationDocumentsDirectory();
+    final stamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+    final path = '${dir.path}/despesas_praia_$stamp.pdf';
+    final file = File(path);
+    await file.writeAsBytes(await doc.save());
+
+    await SharePlus.instance.share(
+      ShareParams(files: [XFile(path)], text: 'Resumo de despesas da praia'),
+    );
+
+    return path;
   }
 
   void load() {

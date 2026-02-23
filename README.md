@@ -1,17 +1,49 @@
-# despesas_praia
+# Despesas da Praia (Flutter MVP)
 
-A new Flutter project.
+App Android Flutter para controle **offline** de despesas entre 4 pessoas, com resumo de acerto e exportação em PDF.
 
-## Getting Started
+## Funcionalidades
 
-This project is a starting point for a Flutter application.
+- 100% offline (sem login/sem backend)
+- 4 pessoas fixas com nomes editáveis em Configurações
+- Cadastro de despesas com:
+  - valor (R$)
+  - categoria (Alimentação, Mercado, Transporte, Passeio, Outros)
+  - quem pagou
+  - data
+  - descrição opcional
+- Tela principal com:
+  - lista de despesas ordenada por data (desc)
+  - total geral
+  - total por pessoa
+- Tela Resumo/Acerto com:
+  - cota por pessoa (total/4)
+  - saldo por pessoa
+  - sugestão de transações (devedores -> credores)
+- Exportação de PDF + compartilhamento (WhatsApp/share sheet Android)
 
-A few resources to get you started if this is your first Flutter project:
+## Como rodar
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```bash
+/opt/flutter/bin/flutter pub get
+/opt/flutter/bin/flutter run
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Como gerar APK release
+
+```bash
+/opt/flutter/bin/flutter build apk --release
+```
+
+APK gerado em:
+
+`build/app/outputs/flutter-apk/app-release.apk`
+
+## Persistência local (Hive)
+
+Os dados são salvos localmente via **Hive** em uma box chamada `despesas_praia`.
+
+- Chave `people`: nomes das 4 pessoas
+- Chave `expenses`: lista de despesas serializadas em JSON
+
+No Android, os arquivos ficam no diretório interno da aplicação (sandbox), persistindo entre aberturas do app.
