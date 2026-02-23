@@ -1,0 +1,60 @@
+name: Generate Screenshots
+
+on:
+  workflow_dispatch:
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Run emulator and capture screenshots
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          profile: pixel_6
+          emulator-options: -no-window -no-audio -no-snapshot -gpu swiftshader_indirect -camera-back none
+          disable-animations: true
+          script: |
+            set -euo pipefail
+
+            adb wait-for-device
+
+            flutter build apk --debug
+
+            APP_ID=$(grep -RhoP 'applicationId\s*[= ]\s*"\K[^"]+' android/app/build.gradle* | head -n1 || true)
+            if [ -z "$APP_ID" ]; then
+              APP_ID=$(grep -RhoP 'package="\K[^"]+' android/app/src/main/AndroidManifest.xml | head -n1)
+            fi
+
+            adb install -r build/app/outputs/flutter-apk/app-debug.apk
+            adb shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1
+
+            mkdir -p screenshots
+            sleep 5
+            adb exec-out screencap -p > screenshots/01_home.png
+
+            adb shell input tap 900 2100 || true
+            sleep 2
+            adb exec-out screencap -p > screenshots/02_resumo.png
+
+            adb shell input keyevent 4 || true
+
+      - name: Upload screenshots artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: screenshots/*.png
