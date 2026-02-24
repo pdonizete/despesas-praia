@@ -55,13 +55,13 @@ void main() {
       MaterialApp(home: Scaffold(body: ExpensesPage(state: state))),
     );
 
-    expect(find.text('Mostrando 3 de 3 despesas'), findsOneWidget);
+    expect(find.text('Mostrando 3 de 3 despesas (100.0%)'), findsOneWidget);
 
     await tester.tap(find.text('Todas').first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Mercado').last);
     await tester.pumpAndSettle();
 
-    expect(find.text('Mostrando 2 de 3 despesas'), findsOneWidget);
+    expect(find.text('Mostrando 2 de 3 despesas (66.7%)'), findsOneWidget);
   });
 }
