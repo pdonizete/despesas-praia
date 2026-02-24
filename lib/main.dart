@@ -112,6 +112,7 @@ class ExpensesPage extends StatefulWidget {
 
 class _ExpensesPageState extends State<ExpensesPage> {
   Category? _selectedCategory;
+  ExpensePeriodFilter _selectedPeriod = ExpensePeriodFilter.all;
   ExpenseSortOption _selectedSort = ExpenseSortOption.dateRecentFirst;
 
   @override
@@ -120,23 +121,39 @@ class _ExpensesPageState extends State<ExpensesPage> {
     _selectedSort = widget.state.storage.loadExpenseSortOption();
   }
 
+  String _buildFilterStatusText({
+    required int totalExpenses,
+    required int periodFilteredCount,
+    required int finalCount,
+  }) {
+    final periodLabel = _selectedPeriod == ExpensePeriodFilter.all
+        ? 'Tudo'
+        : _selectedPeriod.label;
+    final categoryLabel = _selectedCategory?.label ?? 'Todas';
+
+    return 'Filtros ativos: período $periodLabel • categoria $categoryLabel • $finalCount de $totalExpenses despesas (após período: $periodFilteredCount).';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final availableCategories = categoriesInExpenses(widget.state.expenses);
+    final periodFilteredExpenses = applyExpensePeriodFilter(
+      widget.state.expenses,
+      _selectedPeriod,
+    );
+    final availableCategories = categoriesInExpenses(periodFilteredExpenses);
     if (_selectedCategory != null &&
         !availableCategories.contains(_selectedCategory)) {
       _selectedCategory = null;
     }
 
-    final allExpenses = sortExpenses(
-      widget.state.expenses,
-      option: ExpenseSortOption.dateRecentFirst,
-    );
-    final filteredExpenses = applyExpenseCategoryFilter(
-      allExpenses,
+    final categoryFilteredExpenses = applyExpenseCategoryFilter(
+      periodFilteredExpenses,
       _selectedCategory,
     );
-    final expenses = sortExpenses(filteredExpenses, option: _selectedSort);
+    final expenses = sortExpenses(
+      categoryFilteredExpenses,
+      option: _selectedSort,
+    );
 
     return Column(
       children: [
@@ -170,6 +187,27 @@ class _ExpensesPageState extends State<ExpensesPage> {
                   ),
                 ],
               ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: ExpensePeriodFilter.values
+                  .map(
+                    (period) => ChoiceChip(
+                      label: Text(period.label),
+                      selected: _selectedPeriod == period,
+                      onSelected: (_) {
+                        setState(() => _selectedPeriod = period);
+                      },
+                    ),
+                  )
+                  .toList(growable: false),
             ),
           ),
         ),
@@ -224,9 +262,11 @@ class _ExpensesPageState extends State<ExpensesPage> {
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              _selectedCategory == null
-                  ? 'Mostrando ${expenses.length} despesas.'
-                  : 'Filtro ativo: ${_selectedCategory!.label} • ${expenses.length} de ${allExpenses.length} despesas.',
+              _buildFilterStatusText(
+                totalExpenses: widget.state.expenses.length,
+                periodFilteredCount: periodFilteredExpenses.length,
+                finalCount: expenses.length,
+              ),
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -397,7 +437,9 @@ class SettlementPage extends StatelessWidget {
               child: Card(
                 child: ListTile(
                   leading: const Icon(Icons.swap_horiz),
-                  title: Text('${state.people[t.from]} → ${state.people[t.to]}'),
+                  title: Text(
+                    '${state.people[t.from]} → ${state.people[t.to]}',
+                  ),
                   trailing: Text(
                     _currency.format(t.amount),
                     style: const TextStyle(fontWeight: FontWeight.bold),
@@ -552,7 +594,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   button: true,
                   label:
                       'Remover ${_normalizedName(_controllers[i].text, i)} da lista de pessoas',
-                  hint: 'Toque para remover esta pessoa e reatribuir despesas se necessário.',
+                  hint:
+                      'Toque para remover esta pessoa e reatribuir despesas se necessário.',
                   child: IconButton.filledTonal(
                     onPressed: () => _removePerson(i),
                     icon: const Icon(Icons.remove_circle_outline),
@@ -1090,9 +1133,61 @@ extension CategoryX on Category {
   }
 }
 
+enum ExpensePeriodFilter { today, last7Days, last30Days, all }
+
+extension ExpensePeriodFilterX on ExpensePeriodFilter {
+  String get label {
+    switch (this) {
+      case ExpensePeriodFilter.today:
+        return 'Hoje';
+      case ExpensePeriodFilter.last7Days:
+        return '7 dias';
+      case ExpensePeriodFilter.last30Days:
+        return '30 dias';
+      case ExpensePeriodFilter.all:
+        return 'Tudo';
+    }
+  }
+
+  int? get windowInDays {
+    switch (this) {
+      case ExpensePeriodFilter.today:
+        return 1;
+      case ExpensePeriodFilter.last7Days:
+        return 7;
+      case ExpensePeriodFilter.last30Days:
+        return 30;
+      case ExpensePeriodFilter.all:
+        return null;
+    }
+  }
+}
+
 List<Category> categoriesInExpenses(Iterable<Expense> expenses) {
   final used = expenses.map((e) => e.category).toSet();
   return Category.values.where(used.contains).toList(growable: false);
+}
+
+List<Expense> applyExpensePeriodFilter(
+  Iterable<Expense> expenses,
+  ExpensePeriodFilter period, {
+  DateTime? now,
+}) {
+  final days = period.windowInDays;
+  if (days == null) {
+    return expenses.toList(growable: false);
+  }
+
+  final today = now ?? DateTime.now();
+  final end = DateTime(today.year, today.month, today.day);
+  final start = end.subtract(Duration(days: days - 1));
+
+  return expenses
+      .where((e) {
+        final expenseDay = DateTime(e.date.year, e.date.month, e.date.day);
+        return !expenseDay.isBefore(start) && !expenseDay.isAfter(end);
+      })
+      .toList(growable: false);
 }
 
 List<Expense> applyExpenseCategoryFilter(

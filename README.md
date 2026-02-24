@@ -84,6 +84,17 @@ No Android, os arquivos ficam no diretório interno da aplicação (sandbox), pe
 - A opção **"Todas"** remove o filtro e volta a exibir todas as despesas.
 - O card de totais (total geral e total por pessoa) **não é afetado pelo filtro** e continua considerando todas as despesas cadastradas.
 
+## Filtro por período na lista de despesas
+
+A lista da tela principal também permite filtrar por período, com as opções:
+
+- **Hoje**
+- **7 dias**
+- **30 dias**
+- **Tudo**
+
+Com isso, é possível visualizar rapidamente apenas as despesas mais recentes ou todo o histórico.
+
 ## Ordenação da lista de despesas
 
 A lista da tela principal oferece opções de ordenação:
@@ -92,7 +103,7 @@ A lista da tela principal oferece opções de ordenação:
 - **Valor (desc)**
 - **Valor (asc)**
 
-O filtro por categoria e a ordenação convivem: você pode aplicar um filtro e, ao mesmo tempo, escolher a ordenação da lista.
+Os filtros por **categoria** e por **período** convivem com a ordenação: você pode combinar os filtros e, ao mesmo tempo, escolher como a lista será ordenada.
 
 ### Persistência da ordenação escolhida
 

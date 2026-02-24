@@ -64,6 +64,134 @@ void main() {
     expect(filtered, expenses);
   });
 
+  test('applyExpensePeriodFilter com Tudo mantém todas as despesas', () {
+    final expenses = [
+      _expense(id: '1', category: Category.alimentacao, value: 10),
+      _expense(id: '2', category: Category.transporte, value: 20),
+    ];
+
+    final filtered = applyExpensePeriodFilter(
+      expenses,
+      ExpensePeriodFilter.all,
+      now: DateTime(2026, 2, 24),
+    );
+
+    expect(filtered.map((e) => e.id), ['1', '2']);
+  });
+
+  test('applyExpensePeriodFilter de 7 dias usa janela inclusiva por dia', () {
+    final expenses = [
+      _expense(
+        id: 'inside-start',
+        category: Category.alimentacao,
+        value: 10,
+        date: DateTime(2026, 2, 18),
+      ),
+      _expense(
+        id: 'inside-end',
+        category: Category.mercado,
+        value: 20,
+        date: DateTime(2026, 2, 24),
+      ),
+      _expense(
+        id: 'outside-before',
+        category: Category.outros,
+        value: 30,
+        date: DateTime(2026, 2, 17),
+      ),
+    ];
+
+    final filtered = applyExpensePeriodFilter(
+      expenses,
+      ExpensePeriodFilter.last7Days,
+      now: DateTime(2026, 2, 24, 23, 59),
+    );
+
+    expect(filtered.map((e) => e.id), ['inside-start', 'inside-end']);
+  });
+
+  test(
+    'applyExpensePeriodFilter Hoje considera dia fechado (ignora horário)',
+    () {
+      final expenses = [
+        _expense(
+          id: 'today-early',
+          category: Category.alimentacao,
+          value: 10,
+          date: DateTime(2026, 2, 24, 0, 1),
+        ),
+        _expense(
+          id: 'today-late',
+          category: Category.transporte,
+          value: 20,
+          date: DateTime(2026, 2, 24, 23, 59),
+        ),
+        _expense(
+          id: 'yesterday',
+          category: Category.outros,
+          value: 30,
+          date: DateTime(2026, 2, 23, 23, 59),
+        ),
+      ];
+
+      final filtered = applyExpensePeriodFilter(
+        expenses,
+        ExpensePeriodFilter.today,
+        now: DateTime(2026, 2, 24, 12, 0),
+      );
+
+      expect(filtered.map((e) => e.id), ['today-early', 'today-late']);
+    },
+  );
+
+  test(
+    'pipeline período -> categoria -> ordenação mantém resultado esperado',
+    () {
+      final expenses = [
+        _expense(
+          id: 'a',
+          category: Category.alimentacao,
+          value: 50,
+          date: DateTime(2026, 2, 24),
+        ),
+        _expense(
+          id: 'b',
+          category: Category.alimentacao,
+          value: 10,
+          date: DateTime(2026, 2, 20),
+        ),
+        _expense(
+          id: 'c',
+          category: Category.transporte,
+          value: 200,
+          date: DateTime(2026, 2, 23),
+        ),
+        _expense(
+          id: 'd',
+          category: Category.alimentacao,
+          value: 99,
+          date: DateTime(2026, 1, 10),
+        ),
+      ];
+
+      final byPeriod = applyExpensePeriodFilter(
+        expenses,
+        ExpensePeriodFilter.last7Days,
+        now: DateTime(2026, 2, 24),
+      );
+      final byCategory = applyExpenseCategoryFilter(
+        byPeriod,
+        Category.alimentacao,
+      );
+      final sorted = sortExpenses(
+        byCategory,
+        option: ExpenseSortOption.valueLowToHigh,
+      );
+
+      expect(sorted.map((e) => e.id), ['b', 'a']);
+    },
+  );
+
   test('sortExpenses ordena por data recente primeiro por padrão', () {
     final expenses = [
       _expense(
