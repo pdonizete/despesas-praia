@@ -24,6 +24,17 @@ App Android Flutter para controle **offline** de despesas com quantidade **dinâ
   - sugestão de transações (devedores -> credores)
 - Exportação de PDF + compartilhamento (WhatsApp/share sheet Android)
 
+## Acessibilidade (leitor de tela)
+
+Melhorias implementadas para tornar os fluxos principais mais acessíveis com TalkBack/VoiceOver:
+
+- Inclusão de `Semantics` em elementos-chave das telas de despesas, resumo/acerto, configurações e cadastro de despesa.
+- Rótulos e dicas (`label`/`hint`) em botões de ação (ex.: salvar, remover pessoa, exportar PDF, excluir despesa), com descrição clara da ação.
+- Campos de formulário com contexto adicional para leitura por tecnologia assistiva (valor, parcelas, categoria, responsável, data e descrição).
+- Itens de lista e cards do resumo com descrição completa para navegação linear via leitor de tela (valores, categoria, pagador, data e saldos).
+- Função dedicada para construir descrição acessível de despesa (`buildExpenseItemSemanticsLabel`), incluindo cenários de parcelamento e descrição opcional.
+- Teste automatizado cobrindo a geração do texto semântico da despesa para reduzir regressões de acessibilidade.
+
 ## Como rodar
 
 ```bash
