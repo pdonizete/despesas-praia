@@ -7,6 +7,7 @@ Started: 2026-02-24 12:57 UTC
 - Este repositório concentra boa parte da lógica no `lib/main.dart`, enquanto componentes específicos (ex.: API key) podem ficar em arquivos dedicados em `lib/`.
 - Pipelines CI/release ficam em `.github/workflows/`; o release por tag já usa `softprops/action-gh-release` com `generate_release_notes: true` e upload de APK.
 - Testes são executados com `flutter test` e podem validar documentação/artefatos de processo via `dart:io`.
+- Neste ambiente, o Flutter CLI está em `/opt/flutter/bin/flutter` (não necessariamente no `PATH`), então comandos de análise/teste devem usar caminho absoluto.
 
 ---
 
@@ -15,4 +16,11 @@ Started: 2026-02-24 12:57 UTC
 - Criado documento `docs/progress/sinopse_api_key_audit.md` com checklist por objetivo, status (Implementado/Faltante), evidências por arquivo/linha e complementos necessários.
 - Adicionado teste `test/audit_documentation_test.dart` para garantir existência e conteúdo mínimo da auditoria.
 - **Learnings:** a branch já contém parte relevante do escopo (secure storage e release workflow), então o principal gap funcional restante é migração suave e integração de uso da API key.
+---
+
+## 2026-02-24 13:14 UTC - US-001: Validação pós-verificação (execução local de qualidade)
+- Validado que o escopo da US-001 já estava implementado no branch sem necessidade de retrabalho de código.
+- Executado typecheck/análise estática com `/opt/flutter/bin/flutter analyze` (sem issues).
+- Executada suíte de testes com `/opt/flutter/bin/flutter test` (22 testes passando, incluindo `test/audit_documentation_test.dart`).
+- **Learnings:** bloqueio anterior era de PATH/ferramenta; o SDK Flutter já estava disponível em `/opt/flutter/bin/flutter`.
 ---
