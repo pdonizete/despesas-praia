@@ -112,6 +112,7 @@ class ExpensesPage extends StatefulWidget {
 
 class _ExpensesPageState extends State<ExpensesPage> {
   Category? _selectedCategory;
+  ExpenseSortOption _selectedSort = ExpenseSortOption.dateRecentFirst;
 
   @override
   Widget build(BuildContext context) {
@@ -121,9 +122,15 @@ class _ExpensesPageState extends State<ExpensesPage> {
       _selectedCategory = null;
     }
 
-    final allExpenses = [...widget.state.expenses]
-      ..sort((a, b) => b.date.compareTo(a.date));
-    final expenses = applyExpenseCategoryFilter(allExpenses, _selectedCategory);
+    final allExpenses = sortExpenses(
+      widget.state.expenses,
+      option: ExpenseSortOption.dateRecentFirst,
+    );
+    final filteredExpenses = applyExpenseCategoryFilter(
+      allExpenses,
+      _selectedCategory,
+    );
+    final expenses = sortExpenses(filteredExpenses, option: _selectedSort);
 
     return Column(
       children: [
@@ -181,6 +188,28 @@ class _ExpensesPageState extends State<ExpensesPage> {
               ),
             ],
             onChanged: (value) => setState(() => _selectedCategory = value),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+          child: DropdownButtonFormField<ExpenseSortOption>(
+            initialValue: _selectedSort,
+            decoration: const InputDecoration(
+              labelText: 'Ordenar por',
+              border: OutlineInputBorder(),
+            ),
+            items: ExpenseSortOption.values
+                .map(
+                  (option) => DropdownMenuItem<ExpenseSortOption>(
+                    value: option,
+                    child: Text(option.label),
+                  ),
+                )
+                .toList(growable: false),
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() => _selectedSort = value);
+            },
           ),
         ),
         Padding(
@@ -749,6 +778,52 @@ List<Expense> applyExpenseCategoryFilter(
 ) {
   if (category == null) return expenses;
   return expenses.where((e) => e.category == category).toList(growable: false);
+}
+
+enum ExpenseSortOption { dateRecentFirst, valueHighToLow, valueLowToHigh }
+
+extension ExpenseSortOptionX on ExpenseSortOption {
+  String get label {
+    switch (this) {
+      case ExpenseSortOption.dateRecentFirst:
+        return 'Data (recente→antiga)';
+      case ExpenseSortOption.valueHighToLow:
+        return 'Valor (maior→menor)';
+      case ExpenseSortOption.valueLowToHigh:
+        return 'Valor (menor→maior)';
+    }
+  }
+}
+
+List<Expense> sortExpenses(
+  Iterable<Expense> expenses, {
+  ExpenseSortOption option = ExpenseSortOption.dateRecentFirst,
+}) {
+  final sorted = expenses.toList();
+
+  int compareByRecentDate(Expense a, Expense b) => b.date.compareTo(a.date);
+
+  switch (option) {
+    case ExpenseSortOption.dateRecentFirst:
+      sorted.sort(compareByRecentDate);
+      break;
+    case ExpenseSortOption.valueHighToLow:
+      sorted.sort((a, b) {
+        final byValue = b.value.compareTo(a.value);
+        if (byValue != 0) return byValue;
+        return compareByRecentDate(a, b);
+      });
+      break;
+    case ExpenseSortOption.valueLowToHigh:
+      sorted.sort((a, b) {
+        final byValue = a.value.compareTo(b.value);
+        if (byValue != 0) return byValue;
+        return compareByRecentDate(a, b);
+      });
+      break;
+  }
+
+  return sorted;
 }
 
 class Expense {
