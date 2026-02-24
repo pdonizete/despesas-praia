@@ -70,3 +70,7 @@ A lista da tela principal oferece opções de ordenação:
 - **Valor (asc)**
 
 O filtro por categoria e a ordenação convivem: você pode aplicar um filtro e, ao mesmo tempo, escolher a ordenação da lista.
+
+### Persistência da ordenação escolhida
+
+A ordenação selecionada é salva localmente no dispositivo. Ao fechar e reabrir o app, a lista mantém automaticamente a última ordenação usada.
