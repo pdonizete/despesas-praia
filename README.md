@@ -83,6 +83,7 @@ No Android, os arquivos ficam no diretório interno da aplicação (sandbox), pe
 - A lista da tela principal permite filtrar despesas por categoria para facilitar a visualização.
 - A opção **"Todas"** remove o filtro e volta a exibir todas as despesas.
 - O card de totais (total geral e total por pessoa) **não é afetado pelo filtro** e continua considerando todas as despesas cadastradas.
+- A lista exibe um resumo visual no formato **"Mostrando X de Y despesas"**, indicando quantas despesas estão visíveis após os filtros em relação ao total cadastrado.
 
 ## Filtro por período na lista de despesas
 
