@@ -10,9 +10,12 @@ class SettlementTransfer {
   final double amount;
 }
 
-List<double> calculateBalances(List<double> paid, {int peopleCount = 4}) {
+List<double> calculateBalances(List<double> paid, {int? peopleCount}) {
+  final count = (peopleCount ?? paid.length) < 1
+      ? 1
+      : (peopleCount ?? paid.length);
   final total = paid.fold<double>(0, (sum, v) => sum + v);
-  final quota = total / peopleCount;
+  final quota = total / count;
   return paid.map((value) => value - quota).toList(growable: false);
 }
 
