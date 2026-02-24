@@ -112,6 +112,7 @@ class ExpensesPage extends StatefulWidget {
 
 class _ExpensesPageState extends State<ExpensesPage> {
   Category? _selectedCategory;
+  int? _selectedPaidBy;
   ExpensePeriodFilter _selectedPeriod = ExpensePeriodFilter.all;
   ExpenseSortOption _selectedSort = ExpenseSortOption.dateRecentFirst;
 
@@ -125,13 +126,14 @@ class _ExpensesPageState extends State<ExpensesPage> {
     required int totalExpenses,
     required int periodFilteredCount,
     required int finalCount,
+    required String paidByLabel,
   }) {
     final periodLabel = _selectedPeriod == ExpensePeriodFilter.all
         ? 'Tudo'
         : _selectedPeriod.label;
     final categoryLabel = _selectedCategory?.label ?? 'Todas';
 
-    return 'Filtros ativos: período $periodLabel • categoria $categoryLabel • $finalCount de $totalExpenses despesas (após período: $periodFilteredCount).';
+    return 'Filtros ativos: período $periodLabel • categoria $categoryLabel • pagador $paidByLabel • $finalCount de $totalExpenses despesas (após período: $periodFilteredCount).';
   }
 
   @override
@@ -146,14 +148,26 @@ class _ExpensesPageState extends State<ExpensesPage> {
       _selectedCategory = null;
     }
 
+    _selectedPaidBy = normalizeSelectedPaidBy(
+      _selectedPaidBy,
+      peopleCount: widget.state.people.length,
+    );
+
     final categoryFilteredExpenses = applyExpenseCategoryFilter(
       periodFilteredExpenses,
       _selectedCategory,
     );
-    final expenses = sortExpenses(
+    final paidByFilteredExpenses = applyExpensePaidByFilter(
       categoryFilteredExpenses,
+      _selectedPaidBy,
+    );
+    final expenses = sortExpenses(
+      paidByFilteredExpenses,
       option: _selectedSort,
     );
+    final paidByLabel = _selectedPaidBy == null
+        ? 'Todos'
+        : widget.state.people[_selectedPaidBy!];
 
     return Column(
       children: [
@@ -236,6 +250,26 @@ class _ExpensesPageState extends State<ExpensesPage> {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+          child: DropdownButtonFormField<int?>(
+            initialValue: _selectedPaidBy,
+            decoration: const InputDecoration(
+              labelText: 'Filtrar por pagador',
+              border: OutlineInputBorder(),
+            ),
+            items: [
+              const DropdownMenuItem<int?>(value: null, child: Text('Todos')),
+              ...List.generate(widget.state.people.length, (index) {
+                return DropdownMenuItem<int?>(
+                  value: index,
+                  child: Text(widget.state.people[index]),
+                );
+              }),
+            ],
+            onChanged: (value) => setState(() => _selectedPaidBy = value),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
           child: DropdownButtonFormField<ExpenseSortOption>(
             initialValue: _selectedSort,
             decoration: const InputDecoration(
@@ -266,6 +300,7 @@ class _ExpensesPageState extends State<ExpensesPage> {
                 totalExpenses: widget.state.expenses.length,
                 periodFilteredCount: periodFilteredExpenses.length,
                 finalCount: expenses.length,
+                paidByLabel: paidByLabel,
               ),
               style: TextStyle(
                 fontSize: 12,
@@ -1196,6 +1231,17 @@ List<Expense> applyExpenseCategoryFilter(
 ) {
   if (category == null) return expenses;
   return expenses.where((e) => e.category == category).toList(growable: false);
+}
+
+List<Expense> applyExpensePaidByFilter(List<Expense> expenses, int? paidBy) {
+  if (paidBy == null) return expenses;
+  return expenses.where((e) => e.paidBy == paidBy).toList(growable: false);
+}
+
+int? normalizeSelectedPaidBy(int? selectedPaidBy, {required int peopleCount}) {
+  if (selectedPaidBy == null) return null;
+  if (selectedPaidBy < 0 || selectedPaidBy >= peopleCount) return null;
+  return selectedPaidBy;
 }
 
 enum ExpenseSortOption { dateRecentFirst, valueHighToLow, valueLowToHigh }
