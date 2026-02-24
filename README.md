@@ -86,3 +86,13 @@ O filtro por categoria e a ordenação convivem: você pode aplicar um filtro e,
 ### Persistência da ordenação escolhida
 
 A ordenação selecionada é salva localmente no dispositivo. Ao fechar e reabrir o app, a lista mantém automaticamente a última ordenação usada.
+
+## Entrega recente: compartilhamento de sinopse na HomeScreen
+
+A documentação desta entrega inclui os pontos implementados no fluxo de compartilhamento da sinopse:
+
+- Integração com `share_plus` para abrir o share sheet nativo (WhatsApp, Telegram e outros apps compatíveis).
+- Botão de compartilhar no `AppBar` e também na área de resultado, com `Semantics` e `tooltip` para acessibilidade.
+- Tratamento de cenário sem filme carregado: ao tentar compartilhar sem conteúdo, o app exibe `SnackBar` orientativo.
+- Extração de função utilitária para montar o texto de compartilhamento com título, ano e sinopse.
+- Atualização de testes (widget e unitário) para cobrir o novo comportamento de compartilhamento.
