@@ -115,6 +115,12 @@ class _ExpensesPageState extends State<ExpensesPage> {
   ExpenseSortOption _selectedSort = ExpenseSortOption.dateRecentFirst;
 
   @override
+  void initState() {
+    super.initState();
+    _selectedSort = widget.state.storage.loadExpenseSortOption();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final availableCategories = categoriesInExpenses(widget.state.expenses);
     if (_selectedCategory != null &&
@@ -209,6 +215,7 @@ class _ExpensesPageState extends State<ExpensesPage> {
             onChanged: (value) {
               if (value == null) return;
               setState(() => _selectedSort = value);
+              widget.state.storage.saveExpenseSortOption(value.name);
             },
           ),
         ),
@@ -889,6 +896,7 @@ class LocalStorage {
 
   static const _peopleKey = 'people';
   static const _expensesKey = 'expenses';
+  static const _expensesSortOptionKey = 'expenses_sort_option';
 
   List<String> get people {
     final raw = _box.get(_peopleKey);
@@ -919,5 +927,20 @@ class LocalStorage {
   Future<void> saveExpenses(List<Map<String, dynamic>> list) async {
     final serialized = list.map(jsonEncode).toList(growable: false);
     await _box.put(_expensesKey, serialized);
+  }
+
+  ExpenseSortOption loadExpenseSortOption() {
+    final raw = _box.get(_expensesSortOptionKey);
+    if (raw is String) {
+      return ExpenseSortOption.values.firstWhere(
+        (option) => option.name == raw,
+        orElse: () => ExpenseSortOption.dateRecentFirst,
+      );
+    }
+    return ExpenseSortOption.dateRecentFirst;
+  }
+
+  Future<void> saveExpenseSortOption(String optionName) async {
+    await _box.put(_expensesSortOptionKey, optionName);
   }
 }
