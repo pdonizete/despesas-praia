@@ -1,0 +1,19 @@
+# Progress Log
+Run: 1d477808-cfd0-4cf3-815f-783056c4f70b
+Task: Projeto: sinopse-filmes-flutter - melhoria de segurança para armazenamento da API key e fluxos de release
+Started: 2026-02-24 12:12 UTC
+
+## Codebase Patterns
+- O app Flutter está majoritariamente em um único arquivo (`lib/main.dart`) com classes de UI, estado e armazenamento local (`LocalStorage`).
+- Testes usam `flutter_test` no diretório `test/` e podem testar lógica pura sem widgets.
+- Persistência atual usa Hive (`LocalStorage`) e serialização JSON para lista de despesas.
+
+---
+
+## 2026-02-24 12:18 UTC - US-001: Introduzir camada de armazenamento seguro para API key
+- Adicionada dependência `flutter_secure_storage` no `pubspec.yaml`.
+- Criada nova abstração `ApiKeyStore` com operações `readApiKey`, `writeApiKey` e `deleteApiKey` em `lib/api_key_store.dart`.
+- Implementada camada segura com `SecureApiKeyStore`, apoiada por `FlutterSecureKeyValueStorage` (wrapper de `FlutterSecureStorage`) e sem uso do `LocalStorage` legado.
+- Criados testes unitários em `test/api_key_store_test.dart` para escrita/leitura, remoção e chave customizada.
+- **Learnings:** Para facilitar testes sem plugin/platform channel, vale isolar `FlutterSecureStorage` atrás de uma interface (`SecureKeyValueStorage`) e injetar fake em memória.
+---
