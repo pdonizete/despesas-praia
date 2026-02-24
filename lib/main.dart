@@ -301,8 +301,7 @@ class _ExpensesPageState extends State<ExpensesPage> {
                 final summary =
                     'Mostrando $filteredCount de $totalCount despesas';
                 if (totalCount == 0) return summary;
-                final percentage = (filteredCount * 100 / totalCount)
-                    .toStringAsFixed(1);
+                final percentage = (filteredCount * 100 / totalCount).round();
                 return '$summary ($percentage%)';
               }(),
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
