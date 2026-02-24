@@ -96,3 +96,13 @@ A documentação desta entrega inclui os pontos implementados no fluxo de compar
 - Tratamento de cenário sem filme carregado: ao tentar compartilhar sem conteúdo, o app exibe `SnackBar` orientativo.
 - Extração de função utilitária para montar o texto de compartilhamento com título, ano e sinopse.
 - Atualização de testes (widget e unitário) para cobrir o novo comportamento de compartilhamento.
+
+### Validação crítica da entrega
+
+Validação executada no branch `feat/share-sinopse-03584bec`, com verificação completa de qualidade e build:
+
+- `flutter analyze` (lint)
+- `flutter test`
+- `flutter build apk --release`
+
+Para ambientes em que `flutter` não está no `PATH`, foi utilizado fallback explícito para `/opt/flutter/bin/flutter`.
