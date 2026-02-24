@@ -5,13 +5,14 @@ Expense _expense({
   required String id,
   required Category category,
   required double value,
+  DateTime? date,
 }) {
   return Expense(
     id: id,
     value: value,
     category: category,
     paidBy: 0,
-    date: DateTime(2026, 2, 1),
+    date: date ?? DateTime(2026, 2, 1),
     description: '',
   );
 }
@@ -61,5 +62,86 @@ void main() {
     final filtered = applyExpenseCategoryFilter(expenses, null);
 
     expect(filtered, expenses);
+  });
+
+  test('sortExpenses ordena por data recente primeiro por padrão', () {
+    final expenses = [
+      _expense(
+        id: 'old',
+        category: Category.alimentacao,
+        value: 50,
+        date: DateTime(2026, 1, 1),
+      ),
+      _expense(
+        id: 'new',
+        category: Category.alimentacao,
+        value: 10,
+        date: DateTime(2026, 3, 1),
+      ),
+    ];
+
+    final sorted = sortExpenses(expenses);
+
+    expect(sorted.map((e) => e.id), ['new', 'old']);
+  });
+
+  test('sortExpenses ordena por valor maior→menor com desempate por data', () {
+    final expenses = [
+      _expense(
+        id: 'same-older',
+        category: Category.alimentacao,
+        value: 100,
+        date: DateTime(2026, 1, 1),
+      ),
+      _expense(
+        id: 'same-newer',
+        category: Category.alimentacao,
+        value: 100,
+        date: DateTime(2026, 2, 1),
+      ),
+      _expense(
+        id: 'highest',
+        category: Category.alimentacao,
+        value: 200,
+        date: DateTime(2026, 1, 15),
+      ),
+    ];
+
+    final sorted = sortExpenses(
+      expenses,
+      option: ExpenseSortOption.valueHighToLow,
+    );
+
+    expect(sorted.map((e) => e.id), ['highest', 'same-newer', 'same-older']);
+  });
+
+  test('sortExpenses ordena por valor menor→maior com desempate por data', () {
+    final expenses = [
+      _expense(
+        id: 'same-older',
+        category: Category.alimentacao,
+        value: 10,
+        date: DateTime(2026, 1, 1),
+      ),
+      _expense(
+        id: 'same-newer',
+        category: Category.alimentacao,
+        value: 10,
+        date: DateTime(2026, 2, 1),
+      ),
+      _expense(
+        id: 'highest',
+        category: Category.alimentacao,
+        value: 50,
+        date: DateTime(2026, 1, 15),
+      ),
+    ];
+
+    final sorted = sortExpenses(
+      expenses,
+      option: ExpenseSortOption.valueLowToHigh,
+    );
+
+    expect(sorted.map((e) => e.id), ['same-newer', 'same-older', 'highest']);
   });
 }
