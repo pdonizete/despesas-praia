@@ -3,6 +3,8 @@
 App Android Flutter para controle **offline** de despesas com quantidade **dinâmica** de pessoas, com resumo de acerto e exportação em PDF.
 
 ## Funcionalidades
+> Nota de teste conflito D: linha controlada para validar gatilho automático.
+
 > Nota de teste conflito resolvido: mantida a nota B para validar a PR.
 
 
