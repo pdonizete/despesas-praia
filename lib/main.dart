@@ -101,15 +101,29 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-class ExpensesPage extends StatelessWidget {
+class ExpensesPage extends StatefulWidget {
   const ExpensesPage({super.key, required this.state});
 
   final AppState state;
 
   @override
+  State<ExpensesPage> createState() => _ExpensesPageState();
+}
+
+class _ExpensesPageState extends State<ExpensesPage> {
+  Category? _selectedCategory;
+
+  @override
   Widget build(BuildContext context) {
-    final expenses = [...state.expenses]
+    final availableCategories = categoriesInExpenses(widget.state.expenses);
+    if (_selectedCategory != null &&
+        !availableCategories.contains(_selectedCategory)) {
+      _selectedCategory = null;
+    }
+
+    final allExpenses = [...widget.state.expenses]
       ..sort((a, b) => b.date.compareTo(a.date));
+    final expenses = applyExpenseCategoryFilter(allExpenses, _selectedCategory);
 
     return Column(
       children: [
@@ -122,25 +136,73 @@ class ExpensesPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Total geral: ${_currency.format(state.totalGeral)}',
+                    'Total geral: ${_currency.format(widget.state.totalGeral)}',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  for (var i = 0; i < state.people.length; i++)
+                  for (var i = 0; i < widget.state.people.length; i++)
                     Text(
-                      '${state.people[i]}: ${_currency.format(state.totalPorPessoa[i])}',
+                      '${widget.state.people[i]}: ${_currency.format(widget.state.totalPorPessoa[i])}',
                     ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Totais gerais (não aplicam filtro da lista).',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                 ],
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: DropdownButtonFormField<Category?>(
+            initialValue: _selectedCategory,
+            decoration: const InputDecoration(
+              labelText: 'Filtrar por categoria',
+              border: OutlineInputBorder(),
+            ),
+            items: [
+              const DropdownMenuItem<Category?>(
+                value: null,
+                child: Text('Todas'),
+              ),
+              ...availableCategories.map(
+                (category) => DropdownMenuItem<Category?>(
+                  value: category,
+                  child: Text(category.label),
+                ),
+              ),
+            ],
+            onChanged: (value) => setState(() => _selectedCategory = value),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              _selectedCategory == null
+                  ? 'Mostrando ${expenses.length} despesas.'
+                  : 'Filtro ativo: ${_selectedCategory!.label} • ${expenses.length} de ${allExpenses.length} despesas.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
           ),
         ),
         Expanded(
           child: expenses.isEmpty
-              ? const Center(child: Text('Nenhuma despesa cadastrada ainda.'))
+              ? const Center(
+                  child: Text('Nenhuma despesa para o filtro selecionado.'),
+                )
               : ListView.builder(
                   itemCount: expenses.length,
                   itemBuilder: (_, i) {
@@ -154,13 +216,13 @@ class ExpensesPage extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: const Icon(Icons.delete, color: Colors.white),
                       ),
-                      onDismissed: (_) => state.deleteExpense(e.id),
+                      onDismissed: (_) => widget.state.deleteExpense(e.id),
                       child: ListTile(
                         title: Text(
                           '${_currency.format(e.value)} • ${e.category.label}${e.isParcelada ? ' • ${e.parcelas}x de ${_currency.format(e.valorParcela)}' : ''}',
                         ),
                         subtitle: Text(
-                          '${state.people[e.paidBy]} • ${_dateFmt.format(e.date)}${e.description.isNotEmpty ? ' • ${e.description}' : ''}',
+                          '${widget.state.people[e.paidBy]} • ${_dateFmt.format(e.date)}${e.description.isNotEmpty ? ' • ${e.description}' : ''}',
                         ),
                       ),
                     );
@@ -674,6 +736,19 @@ extension CategoryX on Category {
         return 'Outros';
     }
   }
+}
+
+List<Category> categoriesInExpenses(Iterable<Expense> expenses) {
+  final used = expenses.map((e) => e.category).toSet();
+  return Category.values.where(used.contains).toList(growable: false);
+}
+
+List<Expense> applyExpenseCategoryFilter(
+  List<Expense> expenses,
+  Category? category,
+) {
+  if (category == null) return expenses;
+  return expenses.where((e) => e.category == category).toList(growable: false);
 }
 
 class Expense {

@@ -54,3 +54,9 @@ No Android, os arquivos ficam no diretório interno da aplicação (sandbox), pe
 - Quando `parcelas > 1`, a despesa aparece como parcelada (ex.: `6x`) com valor por parcela na lista e no PDF.
 - O cálculo de total geral, total por pessoa, cota e acertos continua usando o **valor total da despesa** (sem quebra mensal).
 - Entradas antigas sem campo `parcelas` continuam válidas e são tratadas como `1`.
+
+## Filtro por categoria na lista de despesas
+
+- A lista da tela principal permite filtrar despesas por categoria para facilitar a visualização.
+- A opção **"Todas"** remove o filtro e volta a exibir todas as despesas.
+- O card de totais (total geral e total por pessoa) **não é afetado pelo filtro** e continua considerando todas as despesas cadastradas.
