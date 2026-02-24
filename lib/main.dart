@@ -294,7 +294,9 @@ class SettlementPage extends StatelessWidget {
                   'Total geral: ${_currency.format(state.totalGeral)}',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
-                Text('Cota por pessoa (total/4): ${_currency.format(quota)}'),
+                Text(
+                  'Cota por pessoa (total/${state.people.length}): ${_currency.format(quota)}',
+                ),
                 const SizedBox(height: 8),
                 for (var i = 0; i < state.people.length; i++)
                   ListTile(
@@ -390,34 +392,144 @@ class _SettingsPageState extends State<SettingsPage> {
     super.dispose();
   }
 
+  String _normalizedName(String raw, int index) {
+    final value = raw.trim();
+    return value.isEmpty ? 'Pessoa ${index + 1}' : value;
+  }
+
+  Future<void> _removePerson(int index) async {
+    if (widget.state.people.length == 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('É necessário manter ao menos 1 pessoa.')),
+      );
+      return;
+    }
+
+    final hasExpenses = widget.state.expenses.any((e) => e.paidBy == index);
+    int? target;
+
+    if (hasExpenses) {
+      target = await showDialog<int>(
+        context: context,
+        builder: (context) {
+          int selected = index == 0 ? 1 : 0;
+          return StatefulBuilder(
+            builder: (context, setDialogState) => AlertDialog(
+              title: const Text('Reatribuir despesas'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${widget.state.people[index]} possui despesas. Escolha para quem reatribuir antes de remover.',
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<int>(
+                    initialValue: selected,
+                    items: List.generate(widget.state.people.length, (i) {
+                      if (i == index) return null;
+                      return DropdownMenuItem(
+                        value: i,
+                        child: Text(widget.state.people[i]),
+                      );
+                    }).whereType<DropdownMenuItem<int>>().toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setDialogState(() => selected = value);
+                      }
+                    },
+                    decoration: const InputDecoration(
+                      labelText: 'Reatribuir para',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, selected),
+                  child: const Text('Reatribuir e remover'),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+      if (target == null) return;
+    }
+
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    await widget.state.removePerson(index, reassignExpensesTo: target);
+    _controllers.removeAt(index).dispose();
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Pessoa removida com sucesso.')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         const Text(
-          'Pessoas (fixas, editáveis)',
+          'Pessoas',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 12),
-        for (var i = 0; i < 4; i++)
+        for (var i = 0; i < _controllers.length; i++)
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: TextField(
-              controller: _controllers[i],
-              decoration: InputDecoration(
-                labelText: 'Pessoa ${i + 1}',
-                border: const OutlineInputBorder(),
-              ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controllers[i],
+                    decoration: InputDecoration(
+                      labelText: 'Pessoa ${i + 1}',
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.filledTonal(
+                  onPressed: () => _removePerson(i),
+                  icon: const Icon(Icons.remove_circle_outline),
+                  tooltip: 'Remover pessoa',
+                ),
+              ],
             ),
           ),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _controllers.add(TextEditingController());
+                  });
+                },
+                icon: const Icon(Icons.person_add_alt_1),
+                label: const Text('Adicionar pessoa'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
         FilledButton.icon(
-          onPressed: () {
-            final names = _controllers
-                .map((c) => c.text.trim().isEmpty ? 'Pessoa' : c.text.trim())
-                .toList(growable: false);
-            widget.state.updatePeople(names);
-            ScaffoldMessenger.of(context).showSnackBar(
+          onPressed: () async {
+            final names = List.generate(
+              _controllers.length,
+              (i) => _normalizedName(_controllers[i].text, i),
+              growable: false,
+            );
+            final messenger = ScaffoldMessenger.of(context);
+            await widget.state.updatePeople(names);
+            messenger.showSnackBar(
               const SnackBar(content: Text('Nomes atualizados com sucesso.')),
             );
           },
@@ -441,16 +553,23 @@ class AppState extends ChangeNotifier {
   double get totalGeral => expenses.fold(0, (sum, e) => sum + e.value);
 
   List<double> get totalPorPessoa {
-    final totals = List<double>.filled(4, 0);
+    final count = people.isEmpty ? 1 : people.length;
+    final totals = List<double>.filled(count, 0);
     for (final e in expenses) {
-      totals[e.paidBy] += e.value;
+      if (e.paidBy >= 0 && e.paidBy < totals.length) {
+        totals[e.paidBy] += e.value;
+      }
     }
     return totals;
   }
 
-  double get quotaPorPessoa => totalGeral / 4;
+  double get quotaPorPessoa =>
+      totalGeral / (people.isEmpty ? 1 : people.length);
 
-  List<double> get saldos => calculateBalances(totalPorPessoa, peopleCount: 4);
+  List<double> get saldos => calculateBalances(
+    totalPorPessoa,
+    peopleCount: people.isEmpty ? 1 : people.length,
+  );
 
   List<SettlementTransfer> calcularAcertos() {
     return calculateSettlements(saldos);
@@ -535,7 +654,14 @@ class AppState extends ChangeNotifier {
 
   void load() {
     people = storage.people;
-    expenses = storage.expenses.map(Expense.fromMap).toList();
+    expenses = storage.expenses
+        .map(Expense.fromMap)
+        .map(
+          (e) => e.paidBy >= 0 && e.paidBy < people.length
+              ? e
+              : e.copyWith(paidBy: 0),
+        )
+        .toList(growable: true);
     notifyListeners();
   }
 
@@ -578,8 +704,69 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> updatePeople(List<String> names) async {
-    people = names.take(4).toList(growable: false);
+    final normalized = names
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList(growable: false);
+    people = normalized.isEmpty ? const ['Pessoa 1'] : normalized;
+    expenses = expenses
+        .map(
+          (e) => e.paidBy >= 0 && e.paidBy < people.length
+              ? e
+              : e.copyWith(paidBy: 0),
+        )
+        .toList(growable: true);
     await storage.savePeople(people);
+    await storage.saveExpenses(expenses.map((e) => e.toMap()).toList());
+    notifyListeners();
+  }
+
+  Future<void> removePerson(int index, {int? reassignExpensesTo}) async {
+    if (people.length <= 1) {
+      throw StateError('É necessário manter ao menos 1 pessoa.');
+    }
+    if (index < 0 || index >= people.length) {
+      throw ArgumentError.value(index, 'index', 'Índice inválido.');
+    }
+
+    final hasExpenses = expenses.any((e) => e.paidBy == index);
+    if (hasExpenses && reassignExpensesTo == null) {
+      throw StateError(
+        'Informe reassignExpensesTo para remover pessoa com despesas.',
+      );
+    }
+
+    if (reassignExpensesTo != null &&
+        (reassignExpensesTo < 0 ||
+            reassignExpensesTo >= people.length ||
+            reassignExpensesTo == index)) {
+      throw ArgumentError.value(
+        reassignExpensesTo,
+        'reassignExpensesTo',
+        'Índice de reatribuição inválido.',
+      );
+    }
+
+    final updatedExpenses = expenses
+        .map((e) {
+          var newPaidBy = e.paidBy;
+          if (e.paidBy == index) {
+            newPaidBy = reassignExpensesTo!;
+          }
+          if (newPaidBy > index) {
+            newPaidBy -= 1;
+          }
+          return e.copyWith(paidBy: newPaidBy);
+        })
+        .toList(growable: true);
+
+    final updatedPeople = [...people]..removeAt(index);
+
+    people = updatedPeople;
+    expenses = updatedExpenses;
+
+    await storage.savePeople(people);
+    await storage.saveExpenses(expenses.map((e) => e.toMap()).toList());
     notifyListeners();
   }
 }
@@ -855,6 +1042,18 @@ class Expense {
   bool get isParcelada => parcelas > 1;
   double get valorParcela => value / parcelas;
 
+  Expense copyWith({int? paidBy}) {
+    return Expense(
+      id: id,
+      value: value,
+      category: category,
+      paidBy: paidBy ?? this.paidBy,
+      date: date,
+      parcelas: parcelas,
+      description: description,
+    );
+  }
+
   Map<String, dynamic> toMap() => {
     'id': id,
     'value': value,
@@ -901,8 +1100,11 @@ class LocalStorage {
   List<String> get people {
     final raw = _box.get(_peopleKey);
     if (raw is List) {
-      final names = raw.map((e) => e.toString()).toList();
-      if (names.length == 4) return names;
+      final names = raw
+          .map((e) => e.toString().trim())
+          .where((e) => e.isNotEmpty)
+          .toList(growable: false);
+      if (names.isNotEmpty) return names;
     }
     final defaults = ['Pessoa 1', 'Pessoa 2', 'Pessoa 3', 'Pessoa 4'];
     _box.put(_peopleKey, defaults);
@@ -910,7 +1112,14 @@ class LocalStorage {
   }
 
   Future<void> savePeople(List<String> names) async {
-    await _box.put(_peopleKey, names.take(4).toList(growable: false));
+    final normalized = names
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList(growable: false);
+    await _box.put(
+      _peopleKey,
+      normalized.isEmpty ? const ['Pessoa 1'] : normalized,
+    );
   }
 
   List<Map<String, dynamic>> get expenses {

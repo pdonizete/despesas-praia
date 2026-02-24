@@ -11,6 +11,14 @@ void main() {
     expect(balances[3], -25);
   });
 
+  test('calcula saldos com N dinâmico', () {
+    final balances = calculateBalances([90, 0, 0], peopleCount: 3);
+
+    expect(balances[0], 60);
+    expect(balances[1], -30);
+    expect(balances[2], -30);
+  });
+
   test('gera transacoes minimas entre devedores e credores', () {
     final balances = [75.0, -25.0, -25.0, -25.0];
     final transfers = calculateSettlements(balances);
