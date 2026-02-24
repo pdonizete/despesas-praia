@@ -3,6 +3,8 @@
 App Android Flutter para controle **offline** de despesas entre 4 pessoas, com resumo de acerto e exportação em PDF.
 
 ## Funcionalidades
+> Nota de teste conflito A: linha controlada para simular merge conflict.
+
 
 - 100% offline (sem login/sem backend)
 - 4 pessoas fixas com nomes editáveis em Configurações
