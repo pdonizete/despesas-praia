@@ -243,22 +243,41 @@ class _ExpensesPageState extends State<ExpensesPage> {
                   itemCount: expenses.length,
                   itemBuilder: (_, i) {
                     final e = expenses[i];
-                    return Dismissible(
-                      key: ValueKey(e.id),
-                      direction: DismissDirection.endToStart,
-                      background: Container(
-                        color: Colors.red.shade400,
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: const Icon(Icons.delete, color: Colors.white),
+                    final personName = widget.state.people[e.paidBy];
+                    return Semantics(
+                      container: true,
+                      label: buildExpenseItemSemanticsLabel(
+                        expense: e,
+                        personName: personName,
                       ),
-                      onDismissed: (_) => widget.state.deleteExpense(e.id),
-                      child: ListTile(
-                        title: Text(
-                          '${_currency.format(e.value)} • ${e.category.label}${e.isParcelada ? ' • ${e.parcelas}x de ${_currency.format(e.valorParcela)}' : ''}',
+                      child: Dismissible(
+                        key: ValueKey(e.id),
+                        direction: DismissDirection.endToStart,
+                        background: Container(
+                          color: Colors.red.shade400,
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: const Icon(Icons.delete, color: Colors.white),
                         ),
-                        subtitle: Text(
-                          '${widget.state.people[e.paidBy]} • ${_dateFmt.format(e.date)}${e.description.isNotEmpty ? ' • ${e.description}' : ''}',
+                        onDismissed: (_) => widget.state.deleteExpense(e.id),
+                        child: ListTile(
+                          title: Text(
+                            '${_currency.format(e.value)} • ${e.category.label}${e.isParcelada ? ' • ${e.parcelas}x de ${_currency.format(e.valorParcela)}' : ''}',
+                          ),
+                          subtitle: Text(
+                            '$personName • ${_dateFmt.format(e.date)}${e.description.isNotEmpty ? ' • ${e.description}' : ''}',
+                          ),
+                          trailing: Semantics(
+                            button: true,
+                            label:
+                                'Excluir despesa de ${_currency.format(e.value)} da categoria ${e.category.label}',
+                            hint: 'Toque para excluir esta despesa.',
+                            child: IconButton(
+                              onPressed: () => widget.state.deleteExpense(e.id),
+                              icon: const Icon(Icons.delete_outline),
+                              tooltip: 'Excluir despesa',
+                            ),
+                          ),
                         ),
                       ),
                     );
@@ -284,77 +303,105 @@ class SettlementPage extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Total geral: ${_currency.format(state.totalGeral)}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  'Cota por pessoa (total/${state.people.length}): ${_currency.format(quota)}',
-                ),
-                const SizedBox(height: 8),
-                for (var i = 0; i < state.people.length; i++)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(state.people[i]),
-                    subtitle: Text(
-                      'Pagou: ${_currency.format(state.totalPorPessoa[i])}',
-                    ),
-                    trailing: Text(
-                      '${saldos[i] >= 0 ? '+' : ''}${_currency.format(saldos[i])}',
-                      style: TextStyle(
-                        color: saldos[i] >= 0 ? Colors.green : Colors.red,
-                        fontWeight: FontWeight.bold,
+        Semantics(
+          container: true,
+          label:
+              'Resumo de totais e saldos. Total geral ${_currency.format(state.totalGeral)}. Cota por pessoa ${_currency.format(quota)}.',
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Total geral: ${_currency.format(state.totalGeral)}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    'Cota por pessoa (total/${state.people.length}): ${_currency.format(quota)}',
+                  ),
+                  const SizedBox(height: 8),
+                  for (var i = 0; i < state.people.length; i++)
+                    Semantics(
+                      container: true,
+                      label:
+                          '${state.people[i]}. Pagou ${_currency.format(state.totalPorPessoa[i])}. Saldo ${(saldos[i] >= 0 ? 'positivo' : 'negativo')} de ${_currency.format(saldos[i].abs())}.',
+                      child: ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(state.people[i]),
+                        subtitle: Text(
+                          'Pagou: ${_currency.format(state.totalPorPessoa[i])}',
+                        ),
+                        trailing: Text(
+                          '${saldos[i] >= 0 ? '+' : ''}${_currency.format(saldos[i])}',
+                          style: TextStyle(
+                            color: saldos[i] >= 0 ? Colors.green : Colors.red,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
         const SizedBox(height: 10),
         SizedBox(
           width: double.infinity,
-          child: FilledButton.icon(
-            onPressed: () async {
-              final path = await state.exportarPdf();
-              if (context.mounted) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text('PDF salvo em: $path')));
-              }
-            },
-            icon: const Icon(Icons.picture_as_pdf),
-            label: const Text('Exportar PDF e compartilhar'),
+          child: Semantics(
+            button: true,
+            label: 'Exportar PDF e compartilhar resumo de despesas',
+            hint: 'Toque para gerar o PDF e abrir o compartilhamento.',
+            child: FilledButton.icon(
+              onPressed: () async {
+                final path = await state.exportarPdf();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('PDF salvo em: $path')),
+                  );
+                }
+              },
+              icon: const Icon(Icons.picture_as_pdf),
+              label: const Text('Exportar PDF e compartilhar'),
+            ),
           ),
         ),
         const SizedBox(height: 10),
-        const Text(
-          'Quem deve para quem',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+        Semantics(
+          container: true,
+          label: 'Bloco de transações de acerto entre pessoas.',
+          child: const Text(
+            'Quem deve para quem',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          ),
         ),
         const SizedBox(height: 6),
         if (transacoes.isEmpty)
-          const Card(
-            child: Padding(
-              padding: EdgeInsets.all(12),
-              child: Text('Tudo acertado no momento. 🎉'),
+          Semantics(
+            container: true,
+            label: 'Nenhuma transação pendente. Tudo acertado no momento.',
+            child: const Card(
+              child: Padding(
+                padding: EdgeInsets.all(12),
+                child: Text('Tudo acertado no momento. 🎉'),
+              ),
             ),
           )
         else
           ...transacoes.map(
-            (t) => Card(
-              child: ListTile(
-                leading: const Icon(Icons.swap_horiz),
-                title: Text('${state.people[t.from]} → ${state.people[t.to]}'),
-                trailing: Text(
-                  _currency.format(t.amount),
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+            (t) => Semantics(
+              container: true,
+              label:
+                  '${state.people[t.from]} deve ${_currency.format(t.amount)} para ${state.people[t.to]}',
+              child: Card(
+                child: ListTile(
+                  leading: const Icon(Icons.swap_horiz),
+                  title: Text('${state.people[t.from]} → ${state.people[t.to]}'),
+                  trailing: Text(
+                    _currency.format(t.amount),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
             ),
@@ -487,19 +534,30 @@ class _SettingsPageState extends State<SettingsPage> {
             child: Row(
               children: [
                 Expanded(
-                  child: TextField(
-                    controller: _controllers[i],
-                    decoration: InputDecoration(
-                      labelText: 'Pessoa ${i + 1}',
-                      border: const OutlineInputBorder(),
+                  child: Semantics(
+                    textField: true,
+                    label: 'Nome da pessoa ${i + 1}',
+                    hint: 'Edite o nome para identificar melhor os gastos.',
+                    child: TextField(
+                      controller: _controllers[i],
+                      decoration: InputDecoration(
+                        labelText: 'Pessoa ${i + 1}',
+                        border: const OutlineInputBorder(),
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                IconButton.filledTonal(
-                  onPressed: () => _removePerson(i),
-                  icon: const Icon(Icons.remove_circle_outline),
-                  tooltip: 'Remover pessoa',
+                Semantics(
+                  button: true,
+                  label:
+                      'Remover ${_normalizedName(_controllers[i].text, i)} da lista de pessoas',
+                  hint: 'Toque para remover esta pessoa e reatribuir despesas se necessário.',
+                  child: IconButton.filledTonal(
+                    onPressed: () => _removePerson(i),
+                    icon: const Icon(Icons.remove_circle_outline),
+                    tooltip: 'Remover pessoa',
+                  ),
                 ),
               ],
             ),
@@ -507,34 +565,44 @@ class _SettingsPageState extends State<SettingsPage> {
         Row(
           children: [
             Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _controllers.add(TextEditingController());
-                  });
-                },
-                icon: const Icon(Icons.person_add_alt_1),
-                label: const Text('Adicionar pessoa'),
+              child: Semantics(
+                button: true,
+                label: 'Adicionar nova pessoa',
+                hint: 'Toque para incluir mais um campo de nome.',
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _controllers.add(TextEditingController());
+                    });
+                  },
+                  icon: const Icon(Icons.person_add_alt_1),
+                  label: const Text('Adicionar pessoa'),
+                ),
               ),
             ),
           ],
         ),
         const SizedBox(height: 10),
-        FilledButton.icon(
-          onPressed: () async {
-            final names = List.generate(
-              _controllers.length,
-              (i) => _normalizedName(_controllers[i].text, i),
-              growable: false,
-            );
-            final messenger = ScaffoldMessenger.of(context);
-            await widget.state.updatePeople(names);
-            messenger.showSnackBar(
-              const SnackBar(content: Text('Nomes atualizados com sucesso.')),
-            );
-          },
-          icon: const Icon(Icons.save),
-          label: const Text('Salvar nomes'),
+        Semantics(
+          button: true,
+          label: 'Salvar nomes das pessoas',
+          hint: 'Toque para aplicar as alterações dos nomes cadastrados.',
+          child: FilledButton.icon(
+            onPressed: () async {
+              final names = List.generate(
+                _controllers.length,
+                (i) => _normalizedName(_controllers[i].text, i),
+                growable: false,
+              );
+              final messenger = ScaffoldMessenger.of(context);
+              await widget.state.updatePeople(names);
+              messenger.showSnackBar(
+                const SnackBar(content: Text('Nomes atualizados com sucesso.')),
+              );
+            },
+            icon: const Icon(Icons.save),
+            label: const Text('Salvar nomes'),
+          ),
         ),
       ],
     );
@@ -818,120 +886,157 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
-              TextFormField(
-                controller: _valueCtrl,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: const InputDecoration(
-                  labelText: 'Valor (R\$)',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  final v = double.tryParse((value ?? '').replaceAll(',', '.'));
-                  if (v == null || v <= 0) {
-                    return 'Informe um valor maior que 0';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: _parcelasCtrl,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Parcelas',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  final parcelas = int.tryParse((value ?? '').trim());
-                  if (parcelas == null || parcelas < 1) {
-                    return 'Informe parcelas (mínimo 1)';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<Category>(
-                initialValue: _category,
-                items: Category.values
-                    .map(
-                      (c) => DropdownMenuItem(value: c, child: Text(c.label)),
-                    )
-                    .toList(),
-                onChanged: (v) =>
-                    setState(() => _category = v ?? Category.alimentacao),
-                decoration: const InputDecoration(
-                  labelText: 'Categoria',
-                  border: OutlineInputBorder(),
+              Semantics(
+                textField: true,
+                label: 'Campo valor da despesa em reais',
+                hint: 'Informe o valor total gasto.',
+                child: TextFormField(
+                  controller: _valueCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: 'Valor (R\$)',
+                    hintText: 'Exemplo: 120,50',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    final v = double.tryParse(
+                      (value ?? '').replaceAll(',', '.'),
+                    );
+                    if (v == null || v <= 0) {
+                      return 'Informe um valor maior que 0';
+                    }
+                    return null;
+                  },
                 ),
               ),
               const SizedBox(height: 10),
-              DropdownButtonFormField<int>(
-                initialValue: _paidBy,
-                items: List.generate(
-                  widget.state.people.length,
-                  (i) => DropdownMenuItem(
-                    value: i,
-                    child: Text(widget.state.people[i]),
+              Semantics(
+                textField: true,
+                label: 'Campo quantidade de parcelas',
+                hint: 'Informe o número de parcelas. Mínimo 1.',
+                child: TextFormField(
+                  controller: _parcelasCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Parcelas',
+                    hintText: 'Exemplo: 1',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    final parcelas = int.tryParse((value ?? '').trim());
+                    if (parcelas == null || parcelas < 1) {
+                      return 'Informe parcelas (mínimo 1)';
+                    }
+                    return null;
+                  },
+                ),
+              ),
+              const SizedBox(height: 10),
+              Semantics(
+                label: 'Selecionar categoria da despesa',
+                hint: 'Escolha uma categoria como alimentação ou transporte.',
+                child: DropdownButtonFormField<Category>(
+                  initialValue: _category,
+                  items: Category.values
+                      .map(
+                        (c) => DropdownMenuItem(value: c, child: Text(c.label)),
+                      )
+                      .toList(),
+                  onChanged: (v) =>
+                      setState(() => _category = v ?? Category.alimentacao),
+                  decoration: const InputDecoration(
+                    labelText: 'Categoria',
+                    border: OutlineInputBorder(),
                   ),
                 ),
-                onChanged: (v) => setState(() => _paidBy = v ?? 0),
-                decoration: const InputDecoration(
-                  labelText: 'Quem pagou',
-                  border: OutlineInputBorder(),
+              ),
+              const SizedBox(height: 10),
+              Semantics(
+                label: 'Selecionar quem pagou a despesa',
+                hint: 'Escolha a pessoa responsável pelo pagamento.',
+                child: DropdownButtonFormField<int>(
+                  initialValue: _paidBy,
+                  items: List.generate(
+                    widget.state.people.length,
+                    (i) => DropdownMenuItem(
+                      value: i,
+                      child: Text(widget.state.people[i]),
+                    ),
+                  ),
+                  onChanged: (v) => setState(() => _paidBy = v ?? 0),
+                  decoration: const InputDecoration(
+                    labelText: 'Quem pagou',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
               ),
               const SizedBox(height: 10),
-              ListTile(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  side: BorderSide(color: Theme.of(context).dividerColor),
+              Semantics(
+                button: true,
+                label: 'Selecionar data da despesa',
+                hint: 'Data atual selecionada: ${_dateFmt.format(_date)}.',
+                child: ListTile(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    side: BorderSide(color: Theme.of(context).dividerColor),
+                  ),
+                  title: const Text('Data'),
+                  subtitle: Text(_dateFmt.format(_date)),
+                  trailing: const Icon(Icons.calendar_today),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2100),
+                      initialDate: _date,
+                    );
+                    if (picked != null) setState(() => _date = picked);
+                  },
                 ),
-                title: const Text('Data'),
-                subtitle: Text(_dateFmt.format(_date)),
-                trailing: const Icon(Icons.calendar_today),
-                onTap: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    firstDate: DateTime(2020),
-                    lastDate: DateTime(2100),
-                    initialDate: _date,
-                  );
-                  if (picked != null) setState(() => _date = picked);
-                },
               ),
               const SizedBox(height: 10),
-              TextFormField(
-                controller: _descriptionCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Descrição (opcional)',
-                  border: OutlineInputBorder(),
+              Semantics(
+                textField: true,
+                label: 'Campo descrição da despesa opcional',
+                hint: 'Adicione detalhes para facilitar identificação.',
+                child: TextFormField(
+                  controller: _descriptionCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Descrição (opcional)',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
-                child: FilledButton(
-                  onPressed: () async {
-                    if (!_formKey.currentState!.validate()) return;
-                    final value = double.parse(
-                      _valueCtrl.text.replaceAll(',', '.'),
-                    );
-                    final parcelas = int.parse(_parcelasCtrl.text.trim());
-                    await widget.state.addExpense(
-                      value: value,
-                      category: _category,
-                      paidBy: _paidBy,
-                      date: _date,
-                      parcelas: parcelas,
-                      description: _descriptionCtrl.text,
-                    );
-                    if (context.mounted) {
-                      Navigator.pop(context);
-                    }
-                  },
-                  child: const Text('Salvar despesa'),
+                child: Semantics(
+                  button: true,
+                  label: 'Salvar despesa',
+                  hint: 'Toque para confirmar o cadastro da despesa.',
+                  child: FilledButton(
+                    onPressed: () async {
+                      if (!_formKey.currentState!.validate()) return;
+                      final value = double.parse(
+                        _valueCtrl.text.replaceAll(',', '.'),
+                      );
+                      final parcelas = int.parse(_parcelasCtrl.text.trim());
+                      await widget.state.addExpense(
+                        value: value,
+                        category: _category,
+                        paidBy: _paidBy,
+                        date: _date,
+                        parcelas: parcelas,
+                        description: _descriptionCtrl.text,
+                      );
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                      }
+                    },
+                    child: const Text('Salvar despesa'),
+                  ),
                 ),
               ),
             ],
@@ -943,6 +1048,30 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
 }
 
 enum Category { alimentacao, mercado, transporte, passeio, outros }
+
+String buildExpenseItemSemanticsLabel({
+  required Expense expense,
+  required String personName,
+}) {
+  final parts = <String>[
+    'Despesa de ${_currency.format(expense.value)}',
+    'categoria ${expense.category.label}',
+    'paga por $personName',
+    'em ${_dateFmt.format(expense.date)}',
+  ];
+
+  if (expense.isParcelada) {
+    parts.add(
+      'parcelada em ${expense.parcelas} vezes de ${_currency.format(expense.valorParcela)}',
+    );
+  }
+
+  if (expense.description.isNotEmpty) {
+    parts.add('descrição: ${expense.description}');
+  }
+
+  return parts.join(', ');
+}
 
 extension CategoryX on Category {
   String get label {
