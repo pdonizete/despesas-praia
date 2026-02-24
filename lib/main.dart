@@ -295,7 +295,15 @@ class _ExpensesPageState extends State<ExpensesPage> {
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              'Mostrando ${expenses.length} de ${widget.state.expenses.length} despesas',
+              () {
+                final filteredCount = expenses.length;
+                final totalCount = widget.state.expenses.length;
+                final summary =
+                    'Mostrando $filteredCount de $totalCount despesas';
+                if (totalCount == 0) return summary;
+                final percentage = (filteredCount * 100 / totalCount).round();
+                return '$summary ($percentage%)';
+              }(),
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
           ),

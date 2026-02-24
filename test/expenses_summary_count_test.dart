@@ -55,13 +55,31 @@ void main() {
       MaterialApp(home: Scaffold(body: ExpensesPage(state: state))),
     );
 
-    expect(find.text('Mostrando 3 de 3 despesas'), findsOneWidget);
+    expect(find.text('Mostrando 3 de 3 despesas (100%)'), findsOneWidget);
 
     await tester.tap(find.text('Todas').first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Mercado').last);
     await tester.pumpAndSettle();
 
-    expect(find.text('Mostrando 2 de 3 despesas'), findsOneWidget);
+    expect(find.text('Mostrando 2 de 3 despesas (67%)'), findsOneWidget);
+  });
+
+  testWidgets('mantém resumo sem percentual quando total de despesas é zero', (
+    tester,
+  ) async {
+    final emptyBox = await Hive.openBox('expenses_summary_count_test_empty');
+    final emptyState = AppState(LocalStorage(emptyBox))..load();
+    await emptyState.updatePeople(['Ana']);
+
+    await tester.pumpWidget(
+      MaterialApp(home: Scaffold(body: ExpensesPage(state: emptyState))),
+    );
+
+    expect(find.text('Mostrando 0 de 0 despesas'), findsOneWidget);
+    expect(find.textContaining('(0%)'), findsNothing);
+
+    await emptyBox.close();
+    await Hive.deleteBoxFromDisk('expenses_summary_count_test_empty');
   });
 }
