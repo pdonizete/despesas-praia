@@ -6,12 +6,13 @@ Expense _expense({
   required Category category,
   required double value,
   DateTime? date,
+  int paidBy = 0,
 }) {
   return Expense(
     id: id,
     value: value,
     category: category,
-    paidBy: 0,
+    paidBy: paidBy,
     date: date ?? DateTime(2026, 2, 1),
     description: '',
   );
@@ -189,6 +190,92 @@ void main() {
       );
 
       expect(sorted.map((e) => e.id), ['b', 'a']);
+    },
+  );
+
+  test('applyExpensePaidByFilter filtra por pagador quando selecionado', () {
+    final expenses = [
+      _expense(id: '1', category: Category.alimentacao, value: 10, paidBy: 0),
+      _expense(id: '2', category: Category.transporte, value: 20, paidBy: 1),
+      _expense(id: '3', category: Category.mercado, value: 30, paidBy: 1),
+    ];
+
+    final filtered = applyExpensePaidByFilter(expenses, 1);
+
+    expect(filtered.map((e) => e.id), ['2', '3']);
+  });
+
+  test('applyExpensePaidByFilter mantém lista quando pagador é nulo', () {
+    final expenses = [
+      _expense(id: '1', category: Category.alimentacao, value: 10, paidBy: 0),
+      _expense(id: '2', category: Category.transporte, value: 20, paidBy: 1),
+    ];
+
+    final filtered = applyExpensePaidByFilter(expenses, null);
+
+    expect(filtered, expenses);
+  });
+
+  test(
+    'pipeline período -> categoria -> pagador -> ordenação mantém resultado esperado',
+    () {
+      final expenses = [
+        _expense(
+          id: 'a',
+          category: Category.alimentacao,
+          value: 50,
+          date: DateTime(2026, 2, 24),
+          paidBy: 1,
+        ),
+        _expense(
+          id: 'b',
+          category: Category.alimentacao,
+          value: 10,
+          date: DateTime(2026, 2, 20),
+          paidBy: 0,
+        ),
+        _expense(
+          id: 'c',
+          category: Category.alimentacao,
+          value: 30,
+          date: DateTime(2026, 2, 22),
+          paidBy: 1,
+        ),
+        _expense(
+          id: 'd',
+          category: Category.transporte,
+          value: 99,
+          date: DateTime(2026, 2, 23),
+          paidBy: 1,
+        ),
+      ];
+
+      final byPeriod = applyExpensePeriodFilter(
+        expenses,
+        ExpensePeriodFilter.last7Days,
+        now: DateTime(2026, 2, 24),
+      );
+      final byCategory = applyExpenseCategoryFilter(
+        byPeriod,
+        Category.alimentacao,
+      );
+      final byPaidBy = applyExpensePaidByFilter(byCategory, 1);
+      final sorted = sortExpenses(
+        byPaidBy,
+        option: ExpenseSortOption.valueLowToHigh,
+      );
+
+      expect(sorted.map((e) => e.id), ['c', 'a']);
+    },
+  );
+
+  test(
+    'normalizeSelectedPaidBy reseta para Todos quando índice é inválido',
+    () {
+      expect(normalizeSelectedPaidBy(2, peopleCount: 2), isNull);
+      expect(normalizeSelectedPaidBy(-1, peopleCount: 2), isNull);
+      expect(normalizeSelectedPaidBy(null, peopleCount: 2), isNull);
+      expect(normalizeSelectedPaidBy(1, peopleCount: 2), 1);
     },
   );
 
