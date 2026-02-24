@@ -95,6 +95,13 @@ A lista da tela principal também permite filtrar por período, com as opções:
 
 Com isso, é possível visualizar rapidamente apenas as despesas mais recentes ou todo o histórico.
 
+## Filtro por pagador na lista de despesas
+
+A lista da tela principal também permite filtrar por **quem pagou** a despesa.
+
+- A opção **Todos** remove o filtro de pagador e exibe despesas de qualquer pessoa.
+- Quando um pagador selecionado deixa de existir (ex.: mudança na lista de pessoas), o filtro é normalizado automaticamente para **Todos**.
+
 ## Ordenação da lista de despesas
 
 A lista da tela principal oferece opções de ordenação:
@@ -103,7 +110,14 @@ A lista da tela principal oferece opções de ordenação:
 - **Valor (desc)**
 - **Valor (asc)**
 
-Os filtros por **categoria** e por **período** convivem com a ordenação: você pode combinar os filtros e, ao mesmo tempo, escolher como a lista será ordenada.
+Os filtros convivem com a ordenação no seguinte pipeline:
+
+1. **Período**
+2. **Categoria**
+3. **Pagador**
+4. **Ordenação**
+
+Assim, é possível combinar período + categoria + pagador e, em seguida, aplicar a ordenação sobre o resultado filtrado.
 
 ### Persistência da ordenação escolhida
 
