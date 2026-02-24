@@ -125,7 +125,6 @@ class _ExpensesPageState extends State<ExpensesPage> {
   String _buildFilterStatusText({
     required int totalExpenses,
     required int periodFilteredCount,
-    required int finalCount,
     required String paidByLabel,
   }) {
     final periodLabel = _selectedPeriod == ExpensePeriodFilter.all
@@ -133,7 +132,7 @@ class _ExpensesPageState extends State<ExpensesPage> {
         : _selectedPeriod.label;
     final categoryLabel = _selectedCategory?.label ?? 'Todas';
 
-    return 'Filtros ativos: período $periodLabel • categoria $categoryLabel • pagador $paidByLabel • $finalCount de $totalExpenses despesas (após período: $periodFilteredCount).';
+    return 'Filtros ativos: período $periodLabel • categoria $categoryLabel • pagador $paidByLabel • total geral $totalExpenses despesas (após período: $periodFilteredCount).';
   }
 
   @override
@@ -296,10 +295,19 @@ class _ExpensesPageState extends State<ExpensesPage> {
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
+              'Mostrando ${expenses.length} de ${widget.state.expenses.length} despesas',
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
               _buildFilterStatusText(
                 totalExpenses: widget.state.expenses.length,
                 periodFilteredCount: periodFilteredExpenses.length,
-                finalCount: expenses.length,
                 paidByLabel: paidByLabel,
               ),
               style: TextStyle(
