@@ -1,5 +1,10 @@
 # Despesas da Praia (Flutter MVP)
 
+[![CI](https://github.com/pdonizete/despesas-praia/actions/workflows/ci.yml/badge.svg)](https://github.com/pdonizete/despesas-praia/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/pdonizete/despesas-praia?include_prereleases&sort=semver)](https://github.com/pdonizete/despesas-praia/releases)
+[![Flutter](https://img.shields.io/badge/Flutter-3.11+-blue.svg)](https://flutter.dev)
+[![License](https://img.shields.io/github/license/pdonizete/despesas-praia)](https://github.com/pdonizete/despesas-praia/blob/main/LICENSE)
+
 App Android Flutter para controle **offline** de despesas com quantidade **dinâmica** de pessoas, com resumo de acerto e exportação em PDF.
 
 ## Funcionalidades
