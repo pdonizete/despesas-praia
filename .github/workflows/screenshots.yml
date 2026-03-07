@@ -2,6 +2,12 @@ name: Generate Screenshots
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main, master]
+    paths:
+      - 'lib/**'
+      - 'test/screenshot_test.dart'
+      - '.github/workflows/screenshots.yml'
 
 jobs:
   screenshots:
@@ -17,44 +23,38 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Flutter pub get
+      - name: Install dependencies
         run: flutter pub get
 
-      - name: Run emulator and capture screenshots
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 34
-          arch: x86_64
-          profile: pixel_6
-          emulator-options: -no-window -no-audio -no-snapshot -gpu swiftshader_indirect -camera-back none
-          disable-animations: true
-          script: |
-            set -euo pipefail
+      - name: Setup test environment
+        run: |
+          # Instalar dependências de fontes para renderização consistente
+          sudo apt-get update
+          sudo apt-get install -y fonts-liberation fontconfig
+          
+          # Criar diretório para screenshots
+          mkdir -p screenshots
 
-            adb wait-for-device
+      - name: Run Golden Tests
+        run: |
+          # Rodar testes de screenshot com golden files
+          # --update-goldens gera os arquivos (não compara)
+          flutter test test/screenshot_test.dart --update-goldens
 
-            flutter build apk --debug
-
-            APP_ID=$(grep -RhoP 'applicationId\s*[= ]\s*"\K[^"]+' android/app/build.gradle* | head -n1 || true)
-            if [ -z "$APP_ID" ]; then
-              APP_ID=$(grep -RhoP 'package="\K[^"]+' android/app/src/main/AndroidManifest.xml | head -n1)
-            fi
-
-            adb install -r build/app/outputs/flutter-apk/app-debug.apk
-            adb shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1
-
-            mkdir -p screenshots
-            sleep 5
-            adb exec-out screencap -p > screenshots/01_home.png
-
-            adb shell input tap 900 2100 || true
-            sleep 2
-            adb exec-out screencap -p > screenshots/02_resumo.png
-
-            adb shell input keyevent 4 || true
+      - name: Collect screenshots
+        run: |
+          # Copiar screenshots gerados para o diretório de artefatos
+          cp /tmp/screenshots/*.png screenshots/ 2>/dev/null || true
+          
+          # Se não gerou em /tmp, procurar no diretório padrão do flutter
+          find . -name "*.png" -path "*/test/*" -exec cp {} screenshots/ \; 2>/dev/null || true
+          
+          # Listar screenshots coletados
+          ls -la screenshots/
 
       - name: Upload screenshots artifact
         uses: actions/upload-artifact@v4
         with:
           name: screenshots
           path: screenshots/*.png
+          if-no-files-found: warn
