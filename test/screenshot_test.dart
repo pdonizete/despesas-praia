@@ -2,10 +2,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:despesas_praia/main.dart';
 
-// Mock storage para testes
+// Mock storage para testes - não depende de Hive
 class MockStorage implements LocalStorage {
   final List<String> _people = ['João', 'Maria', 'Pedro'];
   final List<Map<String, dynamic>> _expenses = [];
@@ -73,11 +72,38 @@ class MockStorage implements LocalStorage {
   Future<void> saveExpenseSortOption(String optionName) async {}
 }
 
+// Widget wrapper para evitar inicialização do Hive
+class TestApp extends StatelessWidget {
+  final LocalStorage storage;
+  final Widget home;
+
+  const TestApp({super.key, required this.storage, required this.home});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Despesas da Praia',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
+        useMaterial3: true,
+      ),
+      home: home,
+    );
+  }
+}
+
 void main() {
   setUpAll(() async {
     // Inicializar Hive com diretório temporário para testes
     final tempDir = Directory.systemTemp.createTempSync('hive_test_');
     Hive.init(tempDir.path);
+    
+    // Abrir box necessária para o app
+    await Hive.openBox('despesas_praia');
+  });
+
+  tearDownAll(() async {
+    await Hive.close();
   });
 
   group('Screenshots', () {
@@ -85,23 +111,16 @@ void main() {
       final storage = MockStorage();
       
       await tester.pumpWidget(
-        MaterialApp(
-          title: 'Despesas da Praia',
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-            useMaterial3: true,
-          ),
-          home: HomePage(storage: storage),
-        ),
+        TestApp(storage: storage, home: HomePage(storage: storage)),
       );
       
       // Aguardar carregamento
-      await tester.pumpAndSettle();
+      await tester.pumpAndSettle(const Duration(seconds: 1));
       
-      // Capturar screenshot - usar diretório que será acessível no CI
+      // Capturar screenshot
       await expectLater(
         find.byType(MaterialApp),
-        matchesGoldenFile('screenshots/01_home.png'),
+        matchesGoldenFile('test/screenshots/01_home.png'),
       );
     });
 
@@ -109,29 +128,22 @@ void main() {
       final storage = MockStorage();
       
       await tester.pumpWidget(
-        MaterialApp(
-          title: 'Despesas da Praia',
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-            useMaterial3: true,
-          ),
-          home: HomePage(storage: storage),
-        ),
+        TestApp(storage: storage, home: HomePage(storage: storage)),
       );
       
       // Aguardar carregamento
-      await tester.pumpAndSettle();
+      await tester.pumpAndSettle(const Duration(seconds: 1));
       
       // Clicar na aba Resumo
       final resumoButton = find.text('Resumo');
       expect(resumoButton, findsOneWidget);
       await tester.tap(resumoButton);
-      await tester.pumpAndSettle();
+      await tester.pumpAndSettle(const Duration(seconds: 1));
       
       // Capturar screenshot
       await expectLater(
         find.byType(MaterialApp),
-        matchesGoldenFile('screenshots/02_resumo.png'),
+        matchesGoldenFile('test/screenshots/02_resumo.png'),
       );
     });
 
@@ -139,29 +151,22 @@ void main() {
       final storage = MockStorage();
       
       await tester.pumpWidget(
-        MaterialApp(
-          title: 'Despesas da Praia',
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-            useMaterial3: true,
-          ),
-          home: HomePage(storage: storage),
-        ),
+        TestApp(storage: storage, home: HomePage(storage: storage)),
       );
       
       // Aguardar carregamento
-      await tester.pumpAndSettle();
+      await tester.pumpAndSettle(const Duration(seconds: 1));
       
       // Clicar na aba Config
       final configButton = find.text('Config');
       expect(configButton, findsOneWidget);
       await tester.tap(configButton);
-      await tester.pumpAndSettle();
+      await tester.pumpAndSettle(const Duration(seconds: 1));
       
       // Capturar screenshot
       await expectLater(
         find.byType(MaterialApp),
-        matchesGoldenFile('screenshots/03_config.png'),
+        matchesGoldenFile('test/screenshots/03_config.png'),
       );
     });
   });
