@@ -11,7 +11,7 @@ App Android Flutter para controle **offline** de despesas com quantidade **dinâ
 
 | Tela Principal | Tela de Resumo |
 |:--:|:--:|
-| <img src="docs/screenshots/01_home.png" width="300" alt="Tela Home"> | <img src="docs/screenshots/02_resumo.png" width="300" alt="Tela Resumo"> |
+| <img src="docs/screenshots/01_home.png" width="400" alt="Tela Home"> | <img src="docs/screenshots/02_resumo.png" width="400" alt="Tela Resumo"> |
 | Lista de despesas com filtros | Acerto e sugestão de transações |
 
 ## ✨ Funcionalidades
