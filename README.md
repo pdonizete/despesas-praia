@@ -9,9 +9,11 @@ App Android Flutter para controle **offline** de despesas com quantidade **dinâ
 
 ## 📱 Screenshots
 
+> 💡 **Como gerar screenshots:** Rode o app no seu dispositivo, navegue até as telas desejadas e capture a tela. Salve as imagens em `docs/screenshots/` com os nomes `01_home.png` e `02_resumo.png`.
+
 | Tela Principal | Tela de Resumo |
 |:--:|:--:|
-| *(em breve)* | *(em breve)* |
+| ![Home](docs/screenshots/01_home.png) | ![Resumo](docs/screenshots/02_resumo.png) |
 | Lista de despesas com filtros | Acerto e sugestão de transações |
 
 ## ✨ Funcionalidades

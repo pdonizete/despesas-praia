@@ -1,17 +1,19 @@
 name: Generate Screenshots
 
 on:
-  workflow_dispatch:
-  push:
-    branches: [main, master]
-    paths:
-      - 'lib/**'
-      - 'test/screenshot_test.dart'
-      - '.github/workflows/screenshots.yml'
+  # Desativado temporariamente - screenshots sendo gerados manualmente
+  # workflow_dispatch:
+  # push:
+  #   branches: [main, master]
+  #   paths:
+  #     - 'lib/**'
+  #     - 'test/screenshot_test.dart'
+  #     - '.github/workflows/screenshots.yml'
 
 jobs:
   screenshots:
     runs-on: ubuntu-latest
+    if: false  # Workflow desativado
 
     steps:
       - name: Checkout
@@ -28,28 +30,18 @@ jobs:
 
       - name: Setup test environment
         run: |
-          # Instalar dependências de fontes para renderização consistente
           sudo apt-get update
           sudo apt-get install -y fonts-liberation fontconfig
-          
-          # Criar diretório para screenshots
           mkdir -p screenshots
 
       - name: Run Golden Tests
         run: |
-          # Rodar testes de screenshot com golden files
-          # --update-goldens gera os arquivos (não compara)
           flutter test test/screenshot_test.dart --update-goldens
 
       - name: Collect screenshots
         run: |
-          # Copiar screenshots gerados para o diretório de artefatos
           cp /tmp/screenshots/*.png screenshots/ 2>/dev/null || true
-          
-          # Se não gerou em /tmp, procurar no diretório padrão do flutter
           find . -name "*.png" -path "*/test/*" -exec cp {} screenshots/ \; 2>/dev/null || true
-          
-          # Listar screenshots coletados
           ls -la screenshots/
 
       - name: Upload screenshots artifact
