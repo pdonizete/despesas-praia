@@ -334,7 +334,9 @@ class _ExpensesPageState extends State<ExpensesPage> {
                   itemCount: expenses.length,
                   itemBuilder: (_, i) {
                     final e = expenses[i];
-                    final personName = widget.state.people[e.paidBy];
+                    final personName = (e.paidBy >= 0 && e.paidBy < widget.state.people.length)
+                        ? widget.state.people[e.paidBy]
+                        : 'Desconhecido';
                     return Semantics(
                       container: true,
                       label: buildExpenseItemSemanticsLabel(
@@ -708,6 +710,21 @@ class AppState extends ChangeNotifier {
 
   final LocalStorage storage;
   final _uuid = const Uuid();
+
+  bool _disposed = false;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) {
+      super.notifyListeners();
+    }
+  }
 
   List<String> people = [];
   List<Expense> expenses = [];
@@ -1113,10 +1130,13 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
                   child: FilledButton(
                     onPressed: () async {
                       if (!_formKey.currentState!.validate()) return;
-                      final value = double.parse(
+                      final value = double.tryParse(
                         _valueCtrl.text.replaceAll(',', '.'),
                       );
-                      final parcelas = int.parse(_parcelasCtrl.text.trim());
+                      if (value == null || value <= 0) return;
+                      final parcelas = int.tryParse(_parcelasCtrl.text.trim()) ?? 1;
+                      if (parcelas < 1) return;
+                      final navigator = Navigator.of(context);
                       await widget.state.addExpense(
                         value: value,
                         category: _category,
@@ -1126,7 +1146,7 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
                         description: _descriptionCtrl.text,
                       );
                       if (context.mounted) {
-                        Navigator.pop(context);
+                        navigator.pop();
                       }
                     },
                     child: const Text('Salvar despesa'),
